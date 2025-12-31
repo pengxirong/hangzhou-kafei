@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据管理 - 杭咖 HANG COFFEE 智慧运营仿真平台</title>
+    <link rel="icon" href="resources/logo.png" type="image/png">
+    
+    <!-- 核心样式库 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Oranienbaum&family=Quattrocento:wght@400;700&family=Quattrocento+Sans:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --coffee-dark: #3C2415;
+            --coffee-medium: #8B5A2B;
+            --coffee-light: #D4A574;
+            --cream-bg: #FAF7F2;
+            --text-primary: #2D3748;
+            --text-secondary: #718096;
+            --success: #48BB78;
+            --warning: #ED8936;
+            --error: #F56565;
+            --info: #4299E1;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--cream-bg);
+            color: var(--text-primary);
+        }
+        
+        .font-serif {
+            font-family: 'Noto Serif SC', serif;
+        }
+        
+        .coffee-button {
+            background: linear-gradient(135deg, var(--coffee-dark) 0%, var(--coffee-medium) 100%);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .coffee-button:hover {
+            background: linear-gradient(135deg, var(--coffee-medium) 0%, var(--coffee-light) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(60, 36, 21, 0.3);
+        }
+        
+        .tab-button {
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab-button.active {
+            color: var(--coffee-medium);
+            border-bottom-color: var(--coffee-light);
+        }
+        
+        .tab-button:hover {
+            color: var(--coffee-medium);
+        }
+        
+        .card {
+            background: white;
+            border: 1px solid rgba(139, 90, 43, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(60, 36, 21, 0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 8px 24px rgba(60, 36, 21, 0.12);
+            transform: translateY(-2px);
+        }
+        
+        .form-input {
+            border: 2px solid rgba(139, 90, 43, 0.2);
+            border-radius: 8px;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--coffee-light);
+            box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+        }
+        
+        .slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(139, 90, 43, 0.2);
+            outline: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--coffee-light);
+            cursor: pointer;
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--coffee-light);
+            cursor: pointer;
+            border: none;
+        }
+        
+        .map-container {
+            height: 400px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid rgba(139, 90, 43, 0.1);
+        }
+        
+        .shop-type-hub { background: linear-gradient(135deg, #8B5A2B, #3C2415); }
+        .shop-type-spoke { background: linear-gradient(135deg, #D4A574, #8B5A2B); }
+        .shop-type-community { background: linear-gradient(135deg, #FAF7F2, #D4A574); }
+        
+        .customer-profile-card {
+            border: 2px solid rgba(139, 90, 43, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+        
+        .customer-profile-card:hover {
+            border-color: var(--coffee-light);
+            box-shadow: 0 4px 12px rgba(212, 165, 116, 0.2);
+        }
+        
+        .product-category-coffee { border-left: 4px solid #8B5A2B; }
+        .product-category-seasonal { border-left: 4px solid #D4A574; }
+        .product-category-tea { border-left: 4px solid #48BB78; }
+        .product-category-frappe { border-left: 4px solid #4299E1; }
+        .product-category-bakery { border-left: 4px solid #ED8936; }
+        .product-category-dessert { border-left: 4px solid #F56565; }
+        
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+        
+        .scroll-reveal.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="fixed top-0 w-full bg-white/90 backdrop-blur-md z-50 border-b border-coffee-brown/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3">
+                    <img src="resources/logo.png" alt="杭咖 HANG COFFEE" class="w-10 h-10">
+                    <div>
+                        <h1 class="text-xl font-bold text-coffee-dark font-serif">杭咖 HANG COFFEE</h1>
+                        <p class="text-xs text-coffee-medium">智慧运营仿真平台</p>
+                    </div>
+                </div>
+                
+                <!-- 导航链接 -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="index.html" class="nav-link font-medium">首页</a>
+                    <a href="simulation.html" class="nav-link font-medium">仿真引擎</a>
+                    <a href="dashboard.html" class="nav-link font-medium">数据大屏</a>
+                    <a href="management.html" class="nav-link font-medium text-coffee-medium">数据管理</a>
+                    <a href="reports.html" class="nav-link font-medium">报告导出</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- 主内容区域 -->
+    <main class="pt-16 min-h-screen">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- 页面标题 -->
+            <div class="mb-8 scroll-reveal">
+                <h1 class="text-4xl font-bold text-coffee-dark mb-4 font-serif">基础数据管理</h1>
+                <p class="text-xl text-text-secondary">
+                    配置店铺信息、客户画像、产品菜单和库存参数，构建您的虚拟咖啡市场
+                </p>
+            </div>
+            
+            <!-- 标签页导航 -->
+            <div class="mb-8 scroll-reveal">
+                <div class="border-b border-coffee-brown/20">
+                    <nav class="flex space-x-8">
+                        <button class="tab-button active py-4 px-2 font-medium text-lg" data-tab="shops">
+                            店铺管理
+                        </button>
+                        <button class="tab-button py-4 px-2 font-medium text-lg" data-tab="customers">
+                            客户画像
+                        </button>
+                        <button class="tab-button py-4 px-2 font-medium text-lg" data-tab="products">
+                            产品菜单
+                        </button>
+                        <button class="tab-button py-4 px-2 font-medium text-lg" data-tab="inventory">
+                            库存管理
+                        </button>
+                    </nav>
+                </div>
+            </div>
+            
+            <!-- 店铺管理标签页 -->
+            <div id="shops-tab" class="tab-content">
+                <div class="grid lg:grid-cols-3 gap-8">
+                    <!-- 店铺列表 -->
+                    <div class="lg:col-span-2">
+                        <div class="card p-6 scroll-reveal">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-2xl font-bold text-coffee-dark font-serif">店铺列表</h2>
+                                <button id="add-shop-btn" class="coffee-button px-6 py-2 rounded-lg font-medium">
+                                    添加店铺
+                                </button>
+                            </div>
+                            
+                            <div id="shops-list" class="space-y-4">
+                                <!-- 店铺卡片将通过JavaScript动态生成 -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 地图选址 -->
+                    <div class="scroll-reveal">
+                        <div class="card p-6">
+                            <h3 class="text-xl font-bold text-coffee-dark mb-4 font-serif">地图选址</h3>
+                            <div id="shop-map" class="map-container mb-4"></div>
+                            <p class="text-sm text-text-secondary">
+                                点击地图选择店铺位置，自动获取经纬度坐标
+                            </p>
+                        </div>
+                        
+                        <!-- 店铺类型说明 -->
+                        <div class="card p-6 mt-6">
+                            <h3 class="text-xl font-bold text-coffee-dark mb-4 font-serif">店铺类型</h3>
+                            <div class="space-y-3">
+                                <div class="p-3 rounded-lg shop-type-hub text-white">
+                                    <h4 class="font-semibold mb-1">旗舰店 (Hub)</h4>
+                                    <p class="text-sm opacity-90">核心商圈，面积大，品类全，社交空间</p>
+                                </div>
+                                <div class="p-3 rounded-lg shop-type-spoke text-white">
+                                    <h4 class="font-semibold mb-1">快取店 (Spoke)</h4>
+                                    <p class="text-sm opacity-90">写字楼、地铁口，面积小，即买即走</p>
+                                </div>
+                                <div class="p-3 rounded-lg shop-type-community text-coffee-dark">
+                                    <h4 class="font-semibold mb-1">社区店</h4>
+                                    <p class="text-sm opacity-80">居民区，注重邻里关系和会员复购</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 客户画像标签页 -->
+            <div id="customers-tab" class="tab-content hidden">
+                <div class="grid lg:grid-cols-2 gap-8">
+                    <!-- 客户类型配置 -->
+                    <div class="scroll-reveal">
+                        <div class="card p-6">
+                            <h2 class="text-2xl font-bold text-coffee-dark mb-6 font-serif">客户类型配置</h2>
+                            
+                            <div id="customer-profiles" class="space-y-6">
+                                <!-- 客户画像卡片将通过JavaScript动态生成 -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 客户行为参数 -->
+                    <div class="scroll-reveal">
+                        <div class="card p-6">
+                            <h3 class="text-xl font-bold text-coffee-dark mb-4 font-serif">行为参数调节</h3>
+                            
+                            <div id="customer-params" class="space-y-6">
+                                <!-- 参数调节器将通过JavaScript动态生成 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 产品菜单标签页 -->
+            <div id="products-tab" class="tab-content hidden">
+                <div class="grid lg:grid-cols-3 gap-8">
+                    <!-- 产品列表 -->
+                    <div class="lg:col-span-2">
+                        <div class="card p-6 scroll-reveal">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-2xl font-bold text-coffee-dark font-serif">产品菜单</h2>
+                                <button id="add-product-btn" class="coffee-button px-6 py-2 rounded-lg font-medium">
+                                    添加产品
+                                </button>
+                            </div>
+                            
+                            <div id="products-list" class="space-y-4">
+                                <!-- 产品卡片将通过JavaScript动态生成 -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 产品分类统计 -->
+                    <div class="scroll-reveal">
+                        <div class="card p-6">
+                            <h3 class="text-xl font-bold text-coffee-dark mb-4 font-serif">分类统计</h3>
+                            <div id="category-stats" class="space-y-4">
+                                <!-- 分类统计将通过JavaScript动态生成 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 价格区间分析 -->
+                        <div class="card p-6 mt-6">
+                            <h3 class="text-xl font-bold text-coffee-dark mb-4 font-serif">价格区间</h3>
+                            <div id="price-range-chart" style="height: 200px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 库存管理标签页 -->
+            <div id="inventory-tab" class="tab-content hidden">
+                <div class="scroll-reveal">
+                    <div class="card p-6">
+                        <h2 class="text-2xl font-bold text-coffee-dark mb-6 font-serif">库存配置</h2>
+                        
+                        <div class="grid lg:grid-cols-2 gap-8">
+                            <!-- 原料库存设置 -->
+                            <div>
+                                <h3 class="text-lg font-semibold text-coffee-dark mb-4">原料库存设置</h3>
+                                <div id="inventory-settings" class="space-y-4">
+                                    <!-- 库存设置将通过JavaScript动态生成 -->
+                                </div>
+                            </div>
+                            
+                            <!-- 补货策略 -->
+                            <div>
+                                <h3 class="text-lg font-semibold text-coffee-dark mb-4">补货策略</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-text-secondary mb-2">
+                                            补货阈值
+                                        </label>
+                                        <input type="range" class="slider w-full" min="10" max="50" value="20" id="restock-threshold">
+                                        <div class="flex justify-between text-xs text-text-secondary mt-1">
+                                            <span>10</span>
+                                            <span id="threshold-value">20</span>
+                                            <span>50</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-text-secondary mb-2">
+                                            补货数量
+                                        </label>
+                                        <input type="range" class="slider w-full" min="30" max="100" value="50" id="restock-amount">
+                                        <div class="flex justify-between text-xs text-text-secondary mt-1">
+                                            <span>30</span>
+                                            <span id="amount-value">50</span>
+                                            <span>100</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-text-secondary mb-2">
+                                            原料保质期(天)
+                                        </label>
+                                        <input type="number" class="form-input w-full" value="30" min="1" max="365" id="shelf-life">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- 店铺编辑模态框 -->
+    <div id="shop-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold text-coffee-dark font-serif">编辑店铺</h3>
+                    <button id="close-shop-modal" class="text-text-secondary hover:text-coffee-medium">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <form id="shop-form" class="space-y-6">
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-text-secondary mb-2">店铺名称</label>
+                            <input type="text" id="shop-name" class="form-input w-full" placeholder="输入店铺名称">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-text-secondary mb-2">店铺类型</label>
+                            <select id="shop-type" class="form-input w-full">
+                                <option value="hub">旗舰店 (Hub)</option>
+                                <option value="spoke">快取店 (Spoke)</option>
+                                <option value="community">社区店</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-text-secondary mb-2">所属区域</label>
+                            <select id="shop-district" class="form-input w-full">
+                                <option value="xihu">西湖区</option>
+                                <option value="shangcheng">上城区</option>
+                                <option value="gongshu">拱墅区</option>
+                                <option value="jianggan">江干区</option>
+                                <option value="xiaoshan">萧山区</option>
+                                <option value="yuhang">余杭区</option>
+                                <option value="binjiang">滨江区</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-text-secondary mb-2">具体位置</label>
+                            <input type="text" id="shop-location" class="form-input w-full" placeholder="如：西湖文化广场">
+                        </div>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-text-secondary mb-2">月租金 (¥)</label>
+                            <input type="number" id="shop-rent" class="form-input w-full" min="5000" max="100000" step="1000">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-text-secondary mb-2">员工数量</label>
+                            <input type="number" id="shop-staff" class="form-input w-full" min="3" max="20">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-text-secondary mb-2">营业面积 (㎡)</label>
+                            <input type="number" id="shop-area" class="form-input w-full" min="30" max="300">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-text-secondary mb-2">经纬度坐标</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="number" id="shop-lng" class="form-input" placeholder="经度" step="0.0001">
+                            <input type="number" id="shop-lat" class="form-input" placeholder="纬度" step="0.0001">
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-4 pt-6">
+                        <button type="button" id="cancel-shop-edit" class="px-6 py-2 border border-coffee-brown/20 rounded-lg text-text-secondary hover:bg-cream-bg">
+                            取消
+                        </button>
+                        <button type="submit" class="coffee-button px-6 py-2 rounded-lg font-medium">
+                            保存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 加载核心JavaScript -->
+    <script src="main.js"></script>
+    
+    <script>
+        // 数据管理页面脚本
+        class DataManagementPage {
+            constructor() {
+                this.currentTab = 'shops';
+                this.map = null;
+                this.editingShop = null;
+                this.init();
+            }
+            
+            init() {
+                this.initTabSwitching();
+                this.initShopManagement();
+                this.initCustomerManagement();
+                this.initProductManagement();
+                this.initInventoryManagement();
+                this.initScrollReveal();
+            }
+            
+            initTabSwitching() {
+                const tabButtons = document.querySelectorAll('.tab-button');
+                const tabContents = document.querySelectorAll('.tab-content');
+                
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const tabId = button.dataset.tab;
+                        
+                        // 更新按钮状态
+                        tabButtons.forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        
+                        // 更新内容显示
+                        tabContents.forEach(content => {
+                            if (content.id === `${tabId}-tab`) {
+                                content.classList.remove('hidden');
+                            } else {
+                                content.classList.add('hidden');
+                            }
+                        });
+                        
+                        this.currentTab = tabId;
+                        
+                        // 初始化地图（如果是店铺管理标签）
+                        if (tabId === 'shops' && !this.map) {
+                            setTimeout(() => this.initMap(), 100);
+                        }
+                    });
+                });
+            }
+            
+            initShopManagement() {
+                this.renderShopsList();
+                this.initShopModal();
+                
+                // 添加店铺按钮
+                document.getElementById('add-shop-btn').addEventListener('click', () => {
+                    this.openShopModal();
+                });
+            }
+            
+            initMap() {
+                if (typeof L === 'undefined') return;
+                
+                // 初始化地图（以杭州市中心为基准）
+                this.map = L.map('shop-map').setView([30.2594, 120.1215], 11);
+                
+                // 添加地图图层
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(this.map);
+                
+                // 添加现有店铺的标记
+                DataStore.shops.forEach(shop => {
+                    if (shop.coordinates) {
+                        const marker = L.marker([shop.coordinates[1], shop.coordinates[0]]).addTo(this.map);
+                        marker.bindPopup(`
+                            <div class="text-center">
+                                <h4 class="font-semibold text-coffee-dark">${shop.name}</h4>
+                                <p class="text-sm text-text-secondary">${shop.location}</p>
+                                <p class="text-xs text-coffee-medium">${SHOP_TYPES[shop.type].name}</p>
+                            </div>
+                        `);
+                    }
+                });
+                
+                // 地图点击事件
+                this.map.on('click', (e) => {
+                    const lat = e.latlng.lat;
+                    const lng = e.latlng.lng;
+                    
+                    // 如果正在编辑店铺，更新坐标
+                    if (this.editingShop) {
+                        document.getElementById('shop-lat').value = lat.toFixed(4);
+                        document.getElementById('shop-lng').value = lng.toFixed(4);
+                    }
+                });
+            }
+            
+            renderShopsList() {
+                const container = document.getElementById('shops-list');
+                container.innerHTML = '';
+                
+                DataStore.shops.forEach(shop => {
+                    const shopCard = this.createShopCard(shop);
+                    container.appendChild(shopCard);
+                });
+            }
+            
+            createShopCard(shop) {
+                const div = document.createElement('div');
+                div.className = 'border border-coffee-brown/20 rounded-lg p-4 hover:border-coffee-light transition-all';
+                
+                const shopTypeInfo = SHOP_TYPES[shop.type];
+                const typeColors = {
+                    hub: 'bg-gradient-to-r from-coffee-medium to-coffee-dark text-white',
+                    spoke: 'bg-gradient-to-r from-coffee-light to-coffee-medium text-white',
+                    community: 'bg-gradient-to-r from-cream-bg to-coffee-light text-coffee-dark'
+                };
+                
+                div.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 class="text-lg font-semibold text-coffee-dark">${shop.name}</h3>
+                            <p class="text-sm text-text-secondary">${shop.location}</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-xs font-medium ${typeColors[shop.type]}">
+                            ${shopTypeInfo.name}
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <span class="text-text-secondary">月租金</span>
+                            <div class="font-semibold text-coffee-dark">¥${shop.rent?.toLocaleString() || '0'}</div>
+                        </div>
+                        <div>
+                            <span class="text-text-secondary">员工数</span>
+                            <div class="font-semibold text-coffee-dark">${shop.staffCount || 0}人</div>
+                        </div>
+                        <div>
+                            <span class="text-text-secondary">面积</span>
+                            <div class="font-semibold text-coffee-dark">${shop.area || 0}㎡</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-2 mt-4">
+                        <button onclick="dataManagement.editShop('${shop.id}')" 
+                                class="px-4 py-2 text-sm bg-coffee-light text-white rounded-lg hover:bg-coffee-medium transition-colors">
+                            编辑
+                        </button>
+                        <button onclick="dataManagement.deleteShop('${shop.id}')" 
+                                class="px-4 py-2 text-sm bg-error text-white rounded-lg hover:bg-red-600 transition-colors">
+                            删除
+                        </button>
+                    </div>
+                `;
+                
+                return div;
+            }
+            
+            initShopModal() {
+                const modal = document.getElementById('shop-modal');
+                const closeBtn = document.getElementById('close-shop-modal');
+                const cancelBtn = document.getElementById('cancel-shop-edit');
+                const form = document.getElementById('shop-form');
+                
+                closeBtn.addEventListener('click', () => this.closeShopModal());
+                cancelBtn.addEventListener('click', () => this.closeShopModal());
+                
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.saveShop();
+                });
+                
+                // 滑块值更新
+                const rentSlider = document.getElementById('shop-rent');
+                const staffSlider = document.getElementById('shop-staff');
+                const areaSlider = document.getElementById('shop-area');
+                
+                if (rentSlider) {
+                    rentSlider.addEventListener('input', (e) => {
+                        // 根据店铺类型设置默认值
+                        const type = document.getElementById('shop-type').value;
+                        const defaultRent = SHOP_TYPES[type].baseRent;
+                        e.target.value = e.target.value || defaultRent;
+                    });
+                }
+            }
+            
+            openShopModal(shop = null) {
+                this.editingShop = shop;
+                const modal = document.getElementById('shop-modal');
+                
+                if (shop) {
+                    // 编辑模式
+                    document.getElementById('shop-name').value = shop.name;
+                    document.getElementById('shop-type').value = shop.type;
+                    document.getElementById('shop-district').value = shop.district;
+                    document.getElementById('shop-location').value = shop.location;
+                    document.getElementById('shop-rent').value = shop.rent || SHOP_TYPES[shop.type].baseRent;
+                    document.getElementById('shop-staff').value = shop.staffCount || SHOP_TYPES[shop.type].maxStaff;
+                    document.getElementById('shop-area').value = shop.area || SHOP_TYPES[shop.type].baseArea;
+                    document.getElementById('shop-lng').value = shop.coordinates?.[0] || '';
+                    document.getElementById('shop-lat').value = shop.coordinates?.[1] || '';
+                } else {
+                    // 新建模式
+                    document.getElementById('shop-form').reset();
+                    // 设置默认值
+                    document.getElementById('shop-type').value = 'hub';
+                    document.getElementById('shop-rent').value = SHOP_TYPES.hub.baseRent;
+                    document.getElementById('shop-staff').value = SHOP_TYPES.hub.maxStaff;
+                    document.getElementById('shop-area').value = SHOP_TYPES.hub.baseArea;
+                }
+                
+                modal.classList.remove('hidden');
+            }
+            
+            closeShopModal() {
+                const modal = document.getElementById('shop-modal');
+                modal.classList.add('hidden');
+                this.editingShop = null;
+            }
+            
+            saveShop() {
+                const formData = {
+                    name: document.getElementById('shop-name').value,
+                    type: document.getElementById('shop-type').value,
+                    district: document.getElementById('shop-district').value,
+                    location: document.getElementById('shop-location').value,
+                    rent: parseInt(document.getElementById('shop-rent').value),
+                    staffCount: parseInt(document.getElementById('shop-staff').value),
+                    area: parseInt(document.getElementById('shop-area').value),
+                    coordinates: [
+                        parseFloat(document.getElementById('shop-lng').value) || 120.1215,
+                        parseFloat(document.getElementById('shop-lat').value) || 30.2594
+                    ]
+                };
+                
+                if (this.editingShop) {
+                    // 更新现有店铺
+                    const index = DataStore.shops.findIndex(s => s.id === this.editingShop.id);
+                    if (index !== -1) {
+                        DataStore.shops[index] = { ...this.editingShop, ...formData };
+                    }
+                } else {
+                    // 添加新店铺
+                    const newShop = {
+                        id: 'shop_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                        ...formData,
+                        dailyRevenue: 0,
+                        dailyOrders: 0
+                    };
+                    DataStore.shops.push(newShop);
+                }
+                
+                this.renderShopsList();
+                this.closeShopModal();
+                
+                // 重新初始化地图
+                if (this.map) {
+                    this.map.remove();
+                    this.map = null;
+                    setTimeout(() => this.initMap(), 100);
+                }
+            }
+            
+            editShop(shopId) {
+                const shop = DataStore.shops.find(s => s.id === shopId);
+                if (shop) {
+                    this.openShopModal(shop);
+                }
+            }
+            
+            deleteShop(shopId) {
+                if (confirm('确定要删除这个店铺吗？')) {
+                    DataStore.shops = DataStore.shops.filter(s => s.id !== shopId);
+                    this.renderShopsList();
+                    
+                    // 重新初始化地图
+                    if (this.map) {
+                        this.map.remove();
+                        this.map = null;
+                        setTimeout(() => this.initMap(), 100);
+                    }
+                }
+            }
+            
+            initCustomerManagement() {
+                this.renderCustomerProfiles();
+                this.renderCustomerParams();
+            }
+            
+            renderCustomerProfiles() {
+                const container = document.getElementById('customer-profiles');
+                container.innerHTML = '';
+                
+                Object.entries(CUSTOMER_PROFILES).forEach(([key, profile]) => {
+                    const card = document.createElement('div');
+                    card.className = 'customer-profile-card';
+                    
+                    card.innerHTML = `
+                        <div class="flex items-center space-x-4 mb-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-coffee-light to-coffee-medium rounded-full flex items-center justify-center">
+                                <span class="text-white font-bold text-sm">${profile.name.charAt(0)}</span>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-semibold text-coffee-dark">${profile.name}</h4>
+                                <p class="text-sm text-text-secondary">${profile.description}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="text-text-secondary">购买频率</span>
+                                <div class="font-semibold text-coffee-dark">${(profile.frequency * 100).toFixed(0)}%</div>
+                            </div>
+                            <div>
+                                <span class="text-text-secondary">价格敏感度</span>
+                                <div class="font-semibold text-coffee-dark">${(profile.priceSensitivity * 100).toFixed(0)}%</div>
+                            </div>
+                            <div>
+                                <span class="text-text-secondary">品质偏好</span>
+                                <div class="font-semibold text-coffee-dark">${(profile.qualityPreference * 100).toFixed(0)}%</div>
+                            </div>
+                            <div>
+                                <span class="text-text-secondary">效率偏好</span>
+                                <div class="font-semibold text-coffee-dark">${(profile.speedPreference * 100).toFixed(0)}%</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <span class="text-sm text-text-secondary">偏好产品：</span>
+                            <div class="flex flex-wrap gap-1 mt-1">
+                                ${profile.preferences.map(pref => {
+                                    const product = PRODUCTS.find(p => p.id === pref);
+                                    return product ? `<span class="px-2 py-1 bg-coffee-light/20 text-coffee-medium rounded text-xs">${product.name}</span>` : '';
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(card);
+                });
+            }
+            
+            renderCustomerParams() {
+                const container = document.getElementById('customer-params');
+                container.innerHTML = '';
+                
+                const params = [
+                    { key: 'frequency', name: '购买频率', min: 0, max: 1, step: 0.1 },
+                    { key: 'priceSensitivity', name: '价格敏感度', min: 0, max: 1, step: 0.1 },
+                    { key: 'qualityPreference', name: '品质偏好', min: 0, max: 1, step: 0.1 },
+                    { key: 'speedPreference', name: '效率偏好', min: 0, max: 1, step: 0.1 }
+                ];
+                
+                params.forEach(param => {
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <label class="block text-sm font-medium text-text-secondary mb-2">
+                            ${param.name}
+                        </label>
+                        <input type="range" class="slider w-full" min="${param.min}" max="${param.max}" step="${param.step}" value="0.5" id="${param.key}-slider">
+                        <div class="flex justify-between text-xs text-text-secondary mt-1">
+                            <span>${param.min}</span>
+                            <span id="${param.key}-value">0.5</span>
+                            <span>${param.max}</span>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                    
+                    // 添加滑块事件监听
+                    const slider = div.querySelector(`#${param.key}-slider`);
+                    const valueDisplay = div.querySelector(`#${param.key}-value`);
+                    
+                    slider.addEventListener('input', (e) => {
+                        valueDisplay.textContent = e.target.value;
+                    });
+                });
+            }
+            
+            initProductManagement() {
+                this.renderProductsList();
+                this.renderCategoryStats();
+                this.renderPriceRangeChart();
+                
+                document.getElementById('add-product-btn').addEventListener('click', () => {
+                    alert('产品添加功能将在后续版本中提供');
+                });
+            }
+            
+            renderProductsList() {
+                const container = document.getElementById('products-list');
+                container.innerHTML = '';
+                
+                PRODUCTS.forEach(product => {
+                    const productCard = this.createProductCard(product);
+                    container.appendChild(productCard);
+                });
+            }
+            
+            createProductCard(product) {
+                const div = document.createElement('div');
+                div.className = `card p-4 product-category-${product.category}`;
+                
+                const categoryNames = {
+                    coffee: '经典咖啡',
+                    seasonal: '季节限定',
+                    tea: '茶饮',
+                    frappe: '冰沙',
+                    bakery: '烘焙',
+                    dessert: '甜品'
+                };
+                
+                div.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h4 class="text-lg font-semibold text-coffee-dark">${product.name}</h4>
+                            <p class="text-sm text-text-secondary">${categoryNames[product.category] || product.category}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold text-coffee-medium">¥${product.price}</div>
+                            <div class="text-sm text-text-secondary">成本 ¥${product.cost}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <span class="text-text-secondary">毛利率</span>
+                            <div class="font-semibold text-success">${((product.price - product.cost) / product.price * 100).toFixed(1)}%</div>
+                        </div>
+                        <div>
+                            <span class="text-text-secondary">制作时间</span>
+                            <div class="font-semibold text-coffee-dark">${product.time}分钟</div>
+                        </div>
+                        <div>
+                            <span class="text-text-secondary">原料</span>
+                            <div class="font-semibold text-coffee-dark">${product.ingredients?.length || 0}种</div>
+                        </div>
+                    </div>
+                    
+                    ${product.ingredients && product.ingredients.length > 0 ? `
+                        <div class="mt-3">
+                            <span class="text-sm text-text-secondary">所需原料：</span>
+                            <div class="flex flex-wrap gap-1 mt-1">
+                                ${product.ingredients.map(ingredient => 
+                                    `<span class="px-2 py-1 bg-coffee-light/20 text-coffee-medium rounded text-xs">${ingredient}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+                
+                return div;
+            }
+            
+            renderCategoryStats() {
+                const container = document.getElementById('category-stats');
+                const stats = {};
+                
+                // 统计各分类的产品数量和价格
+                PRODUCTS.forEach(product => {
+                    if (!stats[product.category]) {
+                        stats[product.category] = {
+                            count: 0,
+                            totalPrice: 0,
+                            totalCost: 0,
+                            name: product.category
+                        };
+                    }
+                    stats[product.category].count++;
+                    stats[product.category].totalPrice += product.price;
+                    stats[product.category].totalCost += product.cost;
+                });
+                
+                const categoryNames = {
+                    coffee: '经典咖啡',
+                    seasonal: '季节限定',
+                    tea: '茶饮',
+                    frappe: '冰沙',
+                    bakery: '烘焙',
+                    dessert: '甜品'
+                };
+                
+                container.innerHTML = '';
+                Object.entries(stats).forEach(([category, data]) => {
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center p-3 bg-cream-bg rounded-lg';
+                    
+                    div.innerHTML = `
+                        <div>
+                            <div class="font-semibold text-coffee-dark">${categoryNames[category] || category}</div>
+                            <div class="text-sm text-text-secondary">${data.count} 款产品</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-semibold text-coffee-dark">¥${(data.totalPrice / data.count).toFixed(1)}</div>
+                            <div class="text-sm text-success">均价</div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(div);
+                });
+            }
+            
+            renderPriceRangeChart() {
+                if (typeof echarts === 'undefined') return;
+                
+                const chartContainer = document.getElementById('price-range-chart');
+                const chart = echarts.init(chartContainer);
+                
+                // 按价格区间统计产品数量
+                const priceRanges = [
+                    { name: '15-25元', min: 15, max: 25, count: 0 },
+                    { name: '25-35元', min: 25, max: 35, count: 0 },
+                    { name: '35-45元', min: 35, max: 45, count: 0 },
+                    { name: '45元以上', min: 45, max: Infinity, count: 0 }
+                ];
+                
+                PRODUCTS.forEach(product => {
+                    priceRanges.forEach(range => {
+                        if (product.price >= range.min && product.price < range.max) {
+                            range.count++;
+                        }
+                    });
+                });
+                
+                const option = {
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}: {c}款 ({d}%)'
+                    },
+                    series: [{
+                        type: 'pie',
+                        radius: '70%',
+                        data: priceRanges.map(range => ({
+                            value: range.count,
+                            name: range.name
+                        })),
+                        itemStyle: {
+                            color: function(params) {
+                                const colors = ['#8B5A2B', '#D4A574', '#FAF7F2', '#3C2415'];
+                                return colors[params.dataIndex];
+                            }
+                        }
+                    }]
+                };
+                
+                chart.setOption(option);
+            }
+            
+            initInventoryManagement() {
+                this.renderInventorySettings();
+                this.initInventorySliders();
+            }
+            
+            renderInventorySettings() {
+                const container = document.getElementById('inventory-settings');
+                const ingredients = ['coffee', 'milk', 'chocolate', 'syrup', 'tea', 'ice', 'orange'];
+                const ingredientNames = {
+                    coffee: '咖啡豆',
+                    milk: '牛奶',
+                    chocolate: '巧克力',
+                    syrup: '糖浆',
+                    tea: '茶叶',
+                    ice: '冰块',
+                    orange: '橙子'
+                };
+                
+                container.innerHTML = '';
+                ingredients.forEach(ingredient => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center justify-between p-3 bg-cream-bg rounded-lg';
+                    
+                    div.innerHTML = `
+                        <div>
+                            <div class="font-medium text-coffee-dark">${ingredientNames[ingredient]}</div>
+                            <div class="text-sm text-text-secondary">当前库存</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-semibold text-coffee-dark">100</div>
+                            <div class="text-sm text-text-secondary">单位</div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(div);
+                });
+            }
+            
+            initInventorySliders() {
+                const thresholdSlider = document.getElementById('restock-threshold');
+                const amountSlider = document.getElementById('restock-amount');
+                const thresholdValue = document.getElementById('threshold-value');
+                const amountValue = document.getElementById('amount-value');
+                
+                thresholdSlider.addEventListener('input', (e) => {
+                    thresholdValue.textContent = e.target.value;
+                });
+                
+                amountSlider.addEventListener('input', (e) => {
+                    amountValue.textContent = e.target.value;
+                });
+            }
+            
+            initScrollReveal() {
+                const observerOptions = {
+                    threshold: 0.1,
+                    rootMargin: '0px 0px -50px 0px'
+                };
+                
+                const observer = new IntersectionObserver(function(entries) {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('revealed');
+                        }
+                    });
+                }, observerOptions);
+                
+                document.querySelectorAll('.scroll-reveal').forEach(el => {
+                    observer.observe(el);
+                });
+            }
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 等待全局对象加载
+            if (typeof DataStore === 'undefined') {
+                const checkInterval = setInterval(() => {
+                    if (typeof DataStore !== 'undefined') {
+                        clearInterval(checkInterval);
+                        window.dataManagement = new DataManagementPage();
+                    }
+                }, 100);
+            } else {
+                window.dataManagement = new DataManagementPage();
+            }
+        });
+    </script>
+</body>
+</html>

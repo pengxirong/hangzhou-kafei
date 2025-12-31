@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仿真引擎 - 杭咖 HANG COFFEE 智慧运营仿真平台</title>
+    <link rel="icon" href="resources/logo.png" type="image/png">
+    
+    <!-- 核心样式库 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Oranienbaum&family=Quattrocento:wght@400;700&family=Quattrocento+Sans:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --coffee-dark: #3C2415;
+            --coffee-medium: #8B5A2B;
+            --coffee-light: #D4A574;
+            --cream-bg: #FAF7F2;
+            --text-primary: #2D3748;
+            --text-secondary: #718096;
+            --success: #48BB78;
+            --warning: #ED8936;
+            --error: #F56565;
+            --info: #4299E1;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--cream-bg);
+            color: var(--text-primary);
+        }
+        
+        .font-serif {
+            font-family: 'Noto Serif SC', serif;
+        }
+        
+        .coffee-button {
+            background: linear-gradient(135deg, var(--coffee-dark) 0%, var(--coffee-medium) 100%);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .coffee-button:hover {
+            background: linear-gradient(135deg, var(--coffee-medium) 0%, var(--coffee-light) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(60, 36, 21, 0.3);
+        }
+        
+        .coffee-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .control-panel {
+            background: white;
+            border: 1px solid rgba(139, 90, 43, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(60, 36, 21, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-running { background-color: var(--success); animation: pulse 2s infinite; }
+        .status-paused { background-color: var(--warning); }
+        .status-stopped { background-color: var(--error); }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .metric-card {
+            background: white;
+            border: 1px solid rgba(139, 90, 43, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(60, 36, 21, 0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(60, 36, 21, 0.12);
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--coffee-dark) 0%, var(--coffee-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .time-display {
+            font-family: 'Quattrocento', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--coffee-dark);
+        }
+        
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(212, 165, 116, 0.1);
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(212, 165, 116, 0.2);
+        }
+        
+        .speed-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(139, 90, 43, 0.2);
+            outline: none;
+        }
+        
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--coffee-light);
+            cursor: pointer;
+        }
+        
+        .event-log {
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(60, 36, 21, 0.02);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        
+        .event-item {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid var(--coffee-light);
+            font-size: 0.875rem;
+        }
+        
+        .weather-control {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+        
+        .weather-btn {
+            padding: 8px 12px;
+            border: 2px solid rgba(139, 90, 43, 0.2);
+            border-radius: 8px;
+            background: white;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .weather-btn.active {
+            border-color: var(--coffee-light);
+            background: rgba(212, 165, 116, 0.1);
+            color: var(--coffee-medium);
+        }
+        
+        .weather-btn:hover {
+            border-color: var(--coffee-light);
+        }
+        
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+        
+        .scroll-reveal.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .chart-container {
+            height: 300px;
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(60, 36, 21, 0.08);
+        }
+        
+        .shop-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+        
+        .shop-status-card {
+            background: white;
+            border: 1px solid rgba(139, 90, 43, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .shop-status-card:hover {
+            border-color: var(--coffee-light);
+            box-shadow: 0 4px 12px rgba(212, 165, 116, 0.2);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(139, 90, 43, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--coffee-light), var(--coffee-medium));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="fixed top-0 w-full bg-white/90 backdrop-blur-md z-50 border-b border-coffee-brown/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3">
+                    <img src="resources/logo.png" alt="杭咖 HANG COFFEE" class="w-10 h-10">
+                    <div>
+                        <h1 class="text-xl font-bold text-coffee-dark font-serif">杭咖 HANG COFFEE</h1>
+                        <p class="text-xs text-coffee-medium">智慧运营仿真平台</p>
+                    </div>
+                </div>
+                
+                <!-- 导航链接 -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="index.html" class="nav-link font-medium">首页</a>
+                    <a href="simulation.html" class="nav-link font-medium text-coffee-medium">仿真引擎</a>
+                    <a href="dashboard.html" class="nav-link font-medium">数据大屏</a>
+                    <a href="management.html" class="nav-link font-medium">数据管理</a>
+                    <a href="reports.html" class="nav-link font-medium">报告导出</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- 主内容区域 -->
+    <main class="pt-16 min-h-screen">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- 页面标题 -->
+            <div class="mb-8 scroll-reveal">
+                <h1 class="text-4xl font-bold text-coffee-dark mb-4 font-serif">智能仿真引擎</h1>
+                <p class="text-xl text-text-secondary">
+                    实时模拟咖啡连锁店运营场景，支持多维度参数调节和动态环境控制
+                </p>
+            </div>
+            
+            <!-- 控制面板 -->
+            <div class="grid lg:grid-cols-4 gap-8 mb-8">
+                <!-- 仿真控制 -->
+                <div class="control-panel p-6 scroll-reveal">
+                    <h2 class="text-xl font-bold text-coffee-dark mb-4 font-serif">仿真控制</h2>
+                    
+                    <div class="space-y-4">
+                        <!-- 状态指示器 -->
+                        <div class="flex items-center justify-between p-3 bg-cream-bg rounded-lg">
+                            <span class="text-sm font-medium text-text-secondary">状态</span>
+                            <span id="simulation-status" class="flex items-center text-sm font-medium">
+                                <span class="status-indicator status-stopped"></span>
+                                已停止
+                            </span>
+                        </div>
+                        
+                        <!-- 时间显示 -->
+                        <div class="p-3 bg-cream-bg rounded-lg text-center">
+                            <div class="text-sm text-text-secondary mb-1">仿真时间</div>
+                            <div id="simulation-time" class="time-display">--:--</div>
+                        </div>
+                        
+                        <!-- 控制按钮 -->
+                        <div class="grid grid-cols-3 gap-2">
+                            <button id="start-btn" class="coffee-button px-3 py-2 rounded-lg text-sm font-medium">
+                                启动
+                            </button>
+                            <button id="pause-btn" class="px-3 py-2 border border-coffee-brown/20 rounded-lg text-sm font-medium hover:bg-cream-bg" disabled>
+                                暂停
+                            </button>
+                            <button id="reset-btn" class="px-3 py-2 border border-error/20 rounded-lg text-sm font-medium text-error hover:bg-red-50">
+                                重置
+                            </button>
+                        </div>
+                        
+                        <!-- 速度控制 -->
+                        <div class="speed-control">
+                            <span class="text-sm font-medium text-text-secondary">速度</span>
+                            <input type="range" id="speed-slider" class="speed-slider" min="1" max="10" value="1">
+                            <span id="speed-value" class="text-sm font-medium text-coffee-dark min-w-[2rem]">1x</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 环境控制 -->
+                <div class="control-panel p-6 scroll-reveal">
+                    <h2 class="text-xl font-bold text-coffee-dark mb-4 font-serif">环境控制</h2>
+                    
+                    <div class="space-y-4">
+                        <!-- 天气控制 -->
+                        <div>
+                            <label class="block text-sm font-medium text-text-secondary mb-3">天气状况</label>
+                            <div class="weather-control">
+                                <button class="weather-btn active" data-weather="sunny">☀️ 晴天</button>
+                                <button class="weather-btn" data-weather="rainy">🌧️ 雨天</button>
+                                <button class="weather-btn" data-weather="snowy">❄️ 雪天</button>
+                                <button class="weather-btn" data-weather="hot">🔥 高温</button>
+                            </div>
+                        </div>
+                        
+                        <!-- 营销活动 -->
+                        <div>
+                            <label class="block text-sm font-medium text-text-secondary mb-3">营销活动</label>
+                            <div class="space-y-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="campaign-1" class="mr-2">
+                                    <span class="text-sm">第二杯半价</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="campaign-2" class="mr-2">
+                                    <span class="text-sm">新品推广</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="campaign-3" class="mr-2">
+                                    <span class="text-sm">会员日特惠</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 实时指标 -->
+                <div class="control-panel p-6 scroll-reveal">
+                    <h2 class="text-xl font-bold text-coffee-dark mb-4 font-serif">实时指标</h2>
+                    
+                    <div class="space-y-4">
+                        <div class="metric-card p-4">
+                            <div class="text-sm text-text-secondary mb-1">今日营收</div>
+                            <div id="current-revenue" class="metric-value text-2xl">¥0</div>
+                        </div>
+                        
+                        <div class="metric-card p-4">
+                            <div class="text-sm text-text-secondary mb-1">订单数量</div>
+                            <div id="current-orders" class="metric-value text-2xl">0</div>
+                        </div>
+                        
+                        <div class="metric-card p-4">
+                            <div class="text-sm text-text-secondary mb-1">平均客单价</div>
+                            <div id="current-avg" class="metric-value text-2xl">¥0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 事件日志 -->
+                <div class="control-panel p-6 scroll-reveal">
+                    <h2 class="text-xl font-bold text-coffee-dark mb-4 font-serif">事件日志</h2>
+                    
+                    <div id="event-log" class="event-log">
+                        <div class="text-sm text-text-secondary text-center py-8">
+                            仿真未启动，暂无事件记录
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 店铺状态网格 -->
+            <div class="mb-8 scroll-reveal">
+                <h2 class="text-2xl font-bold text-coffee-dark mb-6 font-serif">店铺实时状态</h2>
+                <div id="shop-status-grid" class="shop-status-grid">
+                    <!-- 店铺状态卡片将通过JavaScript动态生成 -->
+                </div>
+            </div>
+            
+            <!-- 数据图表 -->
+            <div class="grid lg:grid-cols-2 gap-8">
+                <!-- 销售趋势图 -->
+                <div class="scroll-reveal">
+                    <h2 class="text-2xl font-bold text-coffee-dark mb-4 font-serif">销售趋势</h2>
+                    <div id="sales-trend-chart" class="chart-container"></div>
+                </div>
+                
+                <!-- 客户类型分布 -->
+                <div class="scroll-reveal">
+                    <h2 class="text-2xl font-bold text-coffee-dark mb-4 font-serif">客户类型分布</h2>
+                    <div id="customer-distribution-chart" class="chart-container"></div>
+                </div>
+                
+                <!-- 时段客流分析 -->
+                <div class="scroll-reveal">
+                    <h2 class="text-2xl font-bold text-coffee-dark mb-4 font-serif">时段客流分析</h2>
+                    <div id="hourly-traffic-chart" class="chart-container"></div>
+                </div>
+                
+                <!-- 产品销量排行 -->
+                <div class="scroll-reveal">
+                    <h2 class="text-2xl font-bold text-coffee-dark mb-4 font-serif">产品销量排行</h2>
+                    <div id="product-ranking-chart" class="chart-container"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- 加载核心JavaScript -->
+    <script src="main.js"></script>
+    
+    <script>
+        // 仿真引擎页面脚本
+        class SimulationPage {
+            constructor() {
+                this.charts = {};
+                this.salesTrendData = [];
+                this.hourlyData = Array(24).fill(0);
+                this.customerTypeData = {};
+                this.productSalesData = {};
+                
+                this.init();
+            }
+            
+            init() {
+                this.initControls();
+                this.initCharts();
+                this.renderShopStatus();
+                this.initScrollReveal();
+                this.startRealTimeUpdate();
+            }
+            
+            initControls() {
+                // 仿真控制按钮
+                document.getElementById('start-btn').addEventListener('click', () => this.startSimulation());
+                document.getElementById('pause-btn').addEventListener('click', () => this.pauseSimulation());
+                document.getElementById('reset-btn').addEventListener('click', () => this.resetSimulation());
+                
+                // 速度控制
+                const speedSlider = document.getElementById('speed-slider');
+                const speedValue = document.getElementById('speed-value');
+                
+                speedSlider.addEventListener('input', (e) => {
+                    const speed = parseInt(e.target.value);
+                    speedValue.textContent = `${speed}x`;
+                    
+                    if (typeof simulationEngine !== 'undefined') {
+                        simulationEngine.setSpeed(speed);
+                    }
+                });
+                
+                // 天气控制
+                document.querySelectorAll('.weather-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.weather-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        
+                        const weather = e.target.dataset.weather;
+                        if (typeof simulationEngine !== 'undefined') {
+                            simulationEngine.setWeather(weather);
+                        }
+                        
+                        this.addEventLog(`天气变更为: ${this.getWeatherName(weather)}`);
+                    });
+                });
+                
+                // 营销活动控制
+                document.querySelectorAll('input[type="checkbox"][id^="campaign-"]').forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => {
+                        const campaignId = e.target.id;
+                        const isActive = e.target.checked;
+                        
+                        if (typeof simulationEngine !== 'undefined') {
+                            if (isActive) {
+                                simulationEngine.addMarketingCampaign({
+                                    id: campaignId,
+                                    name: this.getCampaignName(campaignId),
+                                    effect: 0.2,
+                                    shops: DataStore.shops.map(shop => shop.id),
+                                    active: true
+                                });
+                                this.addEventLog(`启动营销活动: ${this.getCampaignName(campaignId)}`);
+                            } else {
+                                simulationEngine.removeMarketingCampaign(campaignId);
+                                this.addEventLog(`结束营销活动: ${this.getCampaignName(campaignId)}`);
+                            }
+                        }
+                    });
+                });
+            }
+            
+            startSimulation() {
+                if (typeof simulationEngine !== 'undefined') {
+                    simulationEngine.start();
+                    
+                    // 更新UI状态
+                    document.getElementById('start-btn').disabled = true;
+                    document.getElementById('pause-btn').disabled = false;
+                    document.getElementById('simulation-status').innerHTML = `
+                        <span class="status-indicator status-running"></span>
+                        运行中
+                    `;
+                    
+                    this.addEventLog('仿真引擎启动');
+                }
+            }
+            
+            pauseSimulation() {
+                if (typeof simulationEngine !== 'undefined') {
+                    simulationEngine.stop();
+                    
+                    // 更新UI状态
+                    document.getElementById('start-btn').disabled = false;
+                    document.getElementById('pause-btn').disabled = true;
+                    document.getElementById('simulation-status').innerHTML = `
+                        <span class="status-indicator status-paused"></span>
+                        已暂停
+                    `;
+                    
+                    this.addEventLog('仿真引擎暂停');
+                }
+            }
+            
+            resetSimulation() {
+                if (typeof simulationEngine !== 'undefined') {
+                    simulationEngine.reset();
+                    
+                    // 重置UI状态
+                    document.getElementById('start-btn').disabled = false;
+                    document.getElementById('pause-btn').disabled = true;
+                    document.getElementById('simulation-status').innerHTML = `
+                        <span class="status-indicator status-stopped"></span>
+                        已停止
+                    `;
+                    
+                    // 重置数据
+                    this.salesTrendData = [];
+                    this.hourlyData = Array(24).fill(0);
+                    this.customerTypeData = {};
+                    this.productSalesData = {};
+                    
+                    // 清空事件日志
+                    document.getElementById('event-log').innerHTML = `
+                        <div class="text-sm text-text-secondary text-center py-8">
+                            仿真已重置
+                        </div>
+                    `;
+                    
+                    // 重置图表
+                    this.updateCharts();
+                    
+                    this.addEventLog('仿真引擎重置');
+                }
+            }
+            
+            initCharts() {
+                this.initSalesTrendChart();
+                this.initCustomerDistributionChart();
+                this.initHourlyTrafficChart();
+                this.initProductRankingChart();
+            }
+            
+            initSalesTrendChart() {
+                const chartContainer = document.getElementById('sales-trend-chart');
+                this.charts.salesTrend = echarts.init(chartContainer);
+                
+                const option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'cross'
+                        }
+                    },
+                    legend: {
+                        data: ['营收', '订单数']
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: []
+                    },
+                    yAxis: [
+                        {
+                            type: 'value',
+                            name: '营收 (¥)',
+                            position: 'left'
+                        },
+                        {
+                            type: 'value',
+                            name: '订单数',
+                            position: 'right'
+                        }
+                    ],
+                    series: [
+                        {
+                            name: '营收',
+                            type: 'line',
+                            yAxisIndex: 0,
+                            data: [],
+                            smooth: true,
+                            itemStyle: {
+                                color: '#8B5A2B'
+                            }
+                        },
+                        {
+                            name: '订单数',
+                            type: 'line',
+                            yAxisIndex: 1,
+                            data: [],
+                            smooth: true,
+                            itemStyle: {
+                                color: '#D4A574'
+                            }
+                        }
+                    ]
+                };
+                
+                this.charts.salesTrend.setOption(option);
+            }
+            
+            initCustomerDistributionChart() {
+                const chartContainer = document.getElementById('customer-distribution-chart');
+                this.charts.customerDistribution = echarts.init(chartContainer);
+                
+                const option = {
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}: {c} ({d}%)'
+                    },
+                    series: [{
+                        type: 'pie',
+                        radius: '70%',
+                        data: [],
+                        itemStyle: {
+                            color: function(params) {
+                                const colors = ['#8B5A2B', '#D4A574', '#FAF7F2', '#3C2415'];
+                                return colors[params.dataIndex % colors.length];
+                            }
+                        },
+                        label: {
+                            formatter: '{b}\n{c}单'
+                        }
+                    }]
+                };
+                
+                this.charts.customerDistribution.setOption(option);
+            }
+            
+            initHourlyTrafficChart() {
+                const chartContainer = document.getElementById('hourly-traffic-chart');
+                this.charts.hourlyTraffic = echarts.init(chartContainer);
+                
+                const option = {
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: Array.from({length: 24}, (_, i) => `${i}:00`)
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '订单数'
+                    },
+                    series: [{
+                        name: '订单数',
+                        type: 'bar',
+                        data: this.hourlyData,
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#D4A574' },
+                                { offset: 1, color: '#8B5A2B' }
+                            ])
+                        }
+                    }]
+                };
+                
+                this.charts.hourlyTraffic.setOption(option);
+            }
+            
+            initProductRankingChart() {
+                const chartContainer = document.getElementById('product-ranking-chart');;
+                this.charts.productRanking = echarts.init(chartContainer);
+                
+                const option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    },
+                    xAxis: {
+                        type: 'value'
+                    },
+                    yAxis: {
+                        type: 'category',
+                        data: []
+                    },
+                    series: [{
+                        name: '销量',
+                        type: 'bar',
+                        data: [],
+                        itemStyle: {
+                            color: '#8B5A2B'
+                        }
+                    }]
+                };
+                
+                this.charts.productRanking.setOption(option);
+            }
+            
+            renderShopStatus() {
+                const container = document.getElementById('shop-status-grid');
+                container.innerHTML = '';
+                
+                DataStore.shops.forEach(shop => {
+                    const performance = typeof AnalyticsEngine !== 'undefined' ? 
+                        AnalyticsEngine.getShopPerformance(shop.id) : { revenue: 0, orderCount: 0 };
+                    
+                    const card = document.createElement('div');
+                    card.className = 'shop-status-card';
+                    
+                    const utilization = Math.min((performance.orderCount / 100) * 100, 100);
+                    
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h4 class="font-semibold text-coffee-dark">${shop.name}</h4>
+                                <p class="text-sm text-text-secondary">${shop.location}</p>
+                            </div>
+                            <span class="px-2 py-1 bg-coffee-light/20 text-coffee-medium rounded text-xs">
+                                ${SHOP_TYPES[shop.type].name}
+                            </span>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-3">
+                            <div>
+                                <div class="text-sm text-text-secondary">今日营收</div>
+                                <div class="font-semibold text-coffee-dark">¥${performance.revenue.toLocaleString()}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-text-secondary">订单数</div>
+                                <div class="font-semibold text-coffee-dark">${performance.orderCount}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-text-secondary">繁忙程度</span>
+                                <span class="text-coffee-dark">${utilization.toFixed(0)}%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${utilization}%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-xs text-text-secondary">
+                            状态: ${utilization > 80 ? '繁忙' : utilization > 50 ? '正常' : '空闲'}
+                        </div>
+                    `;
+                    
+                    container.appendChild(card);
+                });
+            }
+            
+            startRealTimeUpdate() {
+                // 每秒更新一次数据
+                setInterval(() => {
+                    this.updateRealTimeData();
+                    this.updateCharts();
+                }, 1000);
+                
+                // 每5秒更新一次店铺状态
+                setInterval(() => {
+                    this.renderShopStatus();
+                }, 5000);
+            }
+            
+            updateRealTimeData() {
+                if (typeof DataStore !== 'undefined') {
+                    // 更新仿真时间（仅在运行时）
+                    if (DataStore.simulation.isRunning) {
+                        const currentTime = new Date(DataStore.simulation.currentTime);
+                        document.getElementById('simulation-time').textContent = currentTime.toLocaleTimeString('zh-CN');
+                    }
+                    
+                    // 始终更新实时指标（显示已有数据）
+                    if (typeof AnalyticsEngine !== 'undefined') {
+                        const revenue = AnalyticsEngine.getTotalRevenue();
+                        const orders = AnalyticsEngine.getOrderCount();
+                        const avgOrder = AnalyticsEngine.getAverageOrderValue();
+                        
+                        this.animateNumber('current-revenue', revenue, '¥');
+                        this.animateNumber('current-orders', orders);
+                        this.animateNumber('current-avg', avgOrder, '¥');
+                    }
+                }
+            }
+            
+            updateCharts() {
+                if (typeof DataStore === 'undefined' || !DataStore.orders) return;
+                
+                // 更新销售趋势
+                this.updateSalesTrendChart();
+                
+                // 更新客户分布
+                this.updateCustomerDistributionChart();
+                
+                // 更新时段客流
+                this.updateHourlyTrafficChart();
+                
+                // 更新产品排行
+                this.updateProductRankingChart();
+            }
+            
+            updateSalesTrendChart() {
+                const recentOrders = DataStore.orders.slice(-20); // 最近20个订单
+                const timeLabels = [];
+                const revenueData = [];
+                const orderData = [];
+                
+                recentOrders.forEach((order, index) => {
+                    timeLabels.push(order.timestamp.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }));
+                    revenueData.push(order.totalAmount);
+                    orderData.push(1); // 每个订单计为1
+                });
+                
+                this.charts.salesTrend.setOption({
+                    xAxis: { data: timeLabels },
+                    series: [
+                        { data: revenueData },
+                        { data: orderData }
+                    ]
+                });
+            }
+            
+            updateCustomerDistributionChart() {
+                if (typeof AnalyticsEngine !== 'undefined') {
+                    const distribution = AnalyticsEngine.getCustomerTypeDistribution();
+                    const data = Object.entries(distribution).map(([key, value]) => ({
+                        name: value.name,
+                        value: value.count
+                    }));
+                    
+                    this.charts.customerDistribution.setOption({
+                        series: [{ data: data }]
+                    });
+                }
+            }
+            
+            updateHourlyTrafficChart() {
+                // 根据订单时间更新小时数据
+                DataStore.orders.forEach(order => {
+                    const hour = order.timestamp.getHours();
+                    this.hourlyData[hour]++;
+                });
+                
+                this.charts.hourlyTraffic.setOption({
+                    series: [{ data: this.hourlyData }]
+                });
+            }
+            
+            updateProductRankingChart() {
+                if (typeof AnalyticsEngine !== 'undefined') {
+                    const productStats = AnalyticsEngine.getProductPerformance();
+                    const sortedProducts = Object.entries(productStats)
+                        .sort((a, b) => b[1].quantity - a[1].quantity)
+                        .slice(0, 10); // 前10名
+                    
+                    const names = sortedProducts.map(([_, data]) => data.name);
+                    const quantities = sortedProducts.map(([_, data]) => data.quantity);
+                    
+                    this.charts.productRanking.setOption({
+                        yAxis: { data: names },
+                        series: [{ data: quantities }]
+                    });
+                }
+            }
+            
+            addEventLog(message) {
+                const eventLog = document.getElementById('event-log');
+                const timestamp = new Date().toLocaleTimeString('zh-CN');
+                
+                // 如果是第一条消息，清空日志
+                if (eventLog.children.length === 1 && eventLog.children[0].textContent.includes('仿真未启动')) {
+                    eventLog.innerHTML = '';
+                }
+                
+                const eventItem = document.createElement('div');
+                eventItem.className = 'event-item';
+                eventItem.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">${message}</div>
+                        <div class="text-xs text-text-secondary ml-2">${timestamp}</div>
+                    </div>
+                `;
+                
+                eventLog.appendChild(eventItem);
+                
+                // 保持最多20条记录
+                if (eventLog.children.length > 20) {
+                    eventLog.removeChild(eventLog.firstChild);
+                }
+                
+                // 自动滚动到底部
+                eventLog.scrollTop = eventLog.scrollHeight;
+            }
+            
+            animateNumber(elementId, targetValue, prefix = '') {
+                const element = document.getElementById(elementId);
+                if (!element) return;
+                
+                const currentValue = parseFloat(element.textContent.replace(/[^\d.]/g, '')) || 0;
+                const duration = 500;
+                const startTime = performance.now();
+                
+                function updateNumber(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const currentValue = currentValue + (targetValue - currentValue) * progress;
+                    
+                    element.textContent = prefix + Math.floor(currentValue).toLocaleString();
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(updateNumber);
+                    }
+                }
+                
+                requestAnimationFrame(updateNumber);
+            }
+            
+            getWeatherName(weather) {
+                const names = {
+                    sunny: '晴天',
+                    rainy: '雨天',
+                    snowy: '雪天',
+                    hot: '高温天气'
+                };
+                return names[weather] || weather;
+            }
+            
+            getCampaignName(campaignId) {
+                const names = {
+                    'campaign-1': '第二杯半价',
+                    'campaign-2': '新品推广',
+                    'campaign-3': '会员日特惠'
+                };
+                return names[campaignId] || campaignId;
+            }
+            
+            initScrollReveal() {
+                const observerOptions = {
+                    threshold: 0.1,
+                    rootMargin: '0px 0px -50px 0px'
+                };
+                
+                const observer = new IntersectionObserver(function(entries) {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('revealed');
+                        }
+                    });
+                }, observerOptions);
+                
+                document.querySelectorAll('.scroll-reveal').forEach(el => {
+                    observer.observe(el);
+                });
+            }
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 等待全局对象加载
+            if (typeof simulationEngine === 'undefined') {
+                const checkInterval = setInterval(() => {
+                    if (typeof simulationEngine !== 'undefined') {
+                        clearInterval(checkInterval);
+                        window.simulationPage = new SimulationPage();
+                    }
+                }, 100);
+            } else {
+                window.simulationPage = new SimulationPage();
+            }
+        });
+    </script>
+</body>
+</html>

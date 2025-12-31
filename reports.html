@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报告导出 - 杭咖 HANG COFFEE 智慧运营仿真平台</title>
+    <link rel="icon" href="resources/logo.png" type="image/png">
+    
+    <!-- 核心样式库 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Oranienbaum&family=Quattrocento:wght@400;700&family=Quattrocento+Sans:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --coffee-dark: #3C2415;
+            --coffee-medium: #8B5A2B;
+            --coffee-light: #D4A574;
+            --cream-bg: #FAF7F2;
+            --text-primary: #2D3748;
+            --text-secondary: #718096;
+            --success: #48BB78;
+            --warning: #ED8936;
+            --error: #F56565;
+            --info: #4299E1;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--cream-bg);
+            color: var(--text-primary);
+        }
+        
+        .font-serif {
+            font-family: 'Noto Serif SC', serif;
+        }
+        
+        .coffee-button {
+            background: linear-gradient(135deg, var(--coffee-dark) 0%, var(--coffee-medium) 100%);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .coffee-button:hover {
+            background: linear-gradient(135deg, var(--coffee-medium) 0%, var(--coffee-light) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(60, 36, 21, 0.3);
+        }
+        
+        .coffee-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .card {
+            background: white;
+            border: 1px solid rgba(139, 90, 43, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(60, 36, 21, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(60, 36, 21, 0.15);
+        }
+        
+        .form-input {
+            border: 2px solid rgba(139, 90, 43, 0.2);
+            border-radius: 8px;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--coffee-light);
+            box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+        }
+        
+        .form-select {
+            border: 2px solid rgba(139, 90, 43, 0.2);
+            border-radius: 8px;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .form-select:focus {
+            outline: none;
+            border-color: var(--coffee-light);
+            box-shadow: 0 0 0 3px rgba(212, 165, 116, 0.1);
+        }
+        
+        .report-preview {
+            background: white;
+            border: 1px solid rgba(139, 90, 43, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            max-height: 600px;
+            overflow-y: auto;
+            font-family: 'Quattrocento Sans', sans-serif;
+        }
+        
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .report-table th,
+        .report-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(139, 90, 43, 0.1);
+        }
+        
+        .report-table th {
+            background: rgba(212, 165, 116, 0.1);
+            font-weight: 600;
+            color: var(--coffee-dark);
+        }
+        
+        .report-table tr:hover {
+            background: rgba(212, 165, 116, 0.05);
+        }
+        
+        .export-progress {
+            width: 100%;
+            height: 8px;
+            background: rgba(139, 90, 43, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        
+        .export-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--coffee-light), var(--coffee-medium));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .export-status {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .export-status.success {
+            background: rgba(72, 187, 120, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(72, 187, 120, 0.2);
+        }
+        
+        .export-status.error {
+            background: rgba(245, 101, 101, 0.1);
+            color: var(--error);
+            border: 1px solid rgba(245, 101, 101, 0.2);
+        }
+        
+        .export-status.info {
+            background: rgba(66, 153, 225, 0.1);
+            color: var(--info);
+            border: 1px solid rgba(66, 153, 225, 0.2);
+        }
+        
+        .template-card {
+            border: 2px solid rgba(139, 90, 43, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .template-card:hover {
+            border-color: var(--coffee-light);
+            box-shadow: 0 4px 16px rgba(212, 165, 116, 0.2);
+        }
+        
+        .template-card.selected {
+            border-color: var(--coffee-medium);
+            background: rgba(212, 165, 116, 0.05);
+        }
+        
+        .template-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            font-size: 24px;
+        }
+        
+        .template-icon.orders {
+            background: linear-gradient(135deg, #8B5A2B, #3C2415);
+            color: white;
+        }
+        
+        .template-icon.analytics {
+            background: linear-gradient(135deg, #D4A574, #8B5A2B);
+            color: white;
+        }
+        
+        .template-icon.performance {
+            background: linear-gradient(135deg, #48BB78, #38A169);
+            color: white;
+        }
+        
+        .template-icon.comparison {
+            background: linear-gradient(135deg, #4299E1, #3182CE);
+            color: white;
+        }
+        
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+        
+        .scroll-reveal.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(212, 165, 116, 0.05);
+            border-radius: 8px;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--coffee-dark);
+            margin-bottom: 0.25rem;
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .chart-preview {
+            height: 200px;
+            margin: 1rem 0;
+            border: 1px solid rgba(139, 90, 43, 0.1);
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="fixed top-0 w-full bg-white/90 backdrop-blur-md z-50 border-b border-coffee-brown/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3">
+                    <img src="resources/logo.png" alt="杭咖 HANG COFFEE" class="w-10 h-10">
+                    <div>
+                        <h1 class="text-xl font-bold text-coffee-dark font-serif">杭咖 HANG COFFEE</h1>
+                        <p class="text-xs text-coffee-medium">智慧运营仿真平台</p>
+                    </div>
+                </div>
+                
+                <!-- 导航链接 -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="index.html" class="nav-link font-medium">首页</a>
+                    <a href="simulation.html" class="nav-link font-medium">仿真引擎</a>
+                    <a href="dashboard.html" class="nav-link font-medium">数据大屏</a>
+                    <a href="management.html" class="nav-link font-medium">数据管理</a>
+                    <a href="reports.html" class="nav-link font-medium text-coffee-medium">报告导出</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- 主内容区域 -->
+    <main class="pt-16 min-h-screen">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- 页面标题 -->
+            <div class="mb-8 scroll-reveal">
+                <h1 class="text-4xl font-bold text-coffee-dark mb-4 font-serif">报告导出中心</h1>
+                <p class="text-xl text-text-secondary">
+                    生成详细的运营分析报告，支持多种格式导出和自定义报告模板
+                </p>
+            </div>
+            
+            <!-- 报告模板选择 -->
+            <div class="mb-8 scroll-reveal">
+                <h2 class="text-2xl font-bold text-coffee-dark mb-6 font-serif">选择报告模板</h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="template-card selected" data-template="orders">
+                        <div class="template-icon orders">📊</div>
+                        <h3 class="text-lg font-semibold text-coffee-dark mb-2">订单明细报告</h3>
+                        <p class="text-sm text-text-secondary">包含所有订单的详细信息，适合财务分析和数据挖掘</p>
+                    </div>
+                    
+                    <div class="template-card" data-template="analytics">
+                        <div class="template-icon analytics">📈</div>
+                        <h3 class="text-lg font-semibold text-coffee-dark mb-2">运营分析报告</h3>
+                        <p class="text-sm text-text-secondary">综合分析店铺运营数据，提供优化建议和趋势分析</p>
+                    </div>
+                    
+                    <div class="template-card" data-template="performance">
+                        <div class="template-icon performance">🏆</div>
+                        <h3 class="text-lg font-semibold text-coffee-dark mb-2">绩效评估报告</h3>
+                        <p class="text-sm text-text-secondary">评估各店铺和产品的表现，识别优势和改进空间</p>
+                    </div>
+                    
+                    <div class="template-card" data-template="comparison">
+                        <div class="template-icon comparison">⚖️</div>
+                        <h3 class="text-lg font-semibold text-coffee-dark mb-2">策略对比报告</h3>
+                        <p class="text-sm text-text-secondary">对比不同运营策略的效果，支持A/B测试分析</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 报告配置 -->
+            <div class="grid lg:grid-cols-2 gap-8 mb-8">
+                <!-- 配置面板 -->
+                <div class="card scroll-reveal">
+                    <h2 class="text-2xl font-bold text-coffee-dark mb-6 font-serif">报告配置</h2>
+                    
+                    <form id="report-config-form" class="space-y-6">
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-text-secondary mb-2">
+                                    报告名称
+                                </label>
+                                <input type="text" id="report-name" class="form-input w-full" 
+                                       placeholder="输入报告名称" value="杭咖运营分析报告">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-text-secondary mb-2">
+                                    导出格式
+                                </label>
+                                <select id="export-format" class="form-select w-full">
+                                    <option value="excel">Excel (.xlsx)</option>
+                                    <option value="csv">CSV (.csv)</option>
+                                    <option value="json">JSON (.json)</option>
+                                    <option value="pdf">PDF (.pdf)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-text-secondary mb-2">
+                                    时间范围
+                                </label>
+                                <select id="time-range" class="form-select w-full">
+                                    <option value="today">今日</option>
+                                    <option value="week">本周</option>
+                                    <option value="month">本月</option>
+                                    <option value="all">全部数据</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-text-secondary mb-2">
+                                    数据筛选
+                                </label>
+                                <select id="data-filter" class="form-select w-full">
+                                    <option value="all">全部数据</option>
+                                    <option value="shop">按店铺筛选</option>
+                                    <option value="product">按产品筛选</option>
+                                    <option value="customer">按客户类型筛选</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div id="filter-options" class="hidden">
+                            <label class="block text-sm font-medium text-text-secondary mb-2">
+                                筛选条件
+                            </label>
+                            <select id="filter-value" class="form-select w-full">
+                                <option value="">请选择筛选条件</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-text-secondary mb-2">
+                                包含内容
+                            </label>
+                            <div class="space-y-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="include-kpi" class="mr-2" checked>
+                                    <span class="text-sm">关键绩效指标 (KPI)</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="include-charts" class="mr-2" checked>
+                                    <span class="text-sm">数据图表</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="include-analysis" class="mr-2" checked>
+                                    <span class="text-sm">分析建议</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="include-raw-data" class="mr-2">
+                                    <span class="text-sm">原始数据</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="flex space-x-4">
+                            <button type="button" id="preview-btn" class="coffee-button px-6 py-3 rounded-lg font-medium flex-1">
+                                预览报告
+                            </button>
+                            <button type="submit" id="export-btn" class="coffee-button px-6 py-3 rounded-lg font-medium flex-1">
+                                导出报告
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 预览面板 -->
+                <div class="card scroll-reveal">
+                    <h2 class="text-2xl font-bold text-coffee-dark mb-6 font-serif">报告预览</h2>
+                    
+                    <div id="report-preview" class="report-preview">
+                        <div class="text-center py-12 text-text-secondary">
+                            <div class="text-4xl mb-4">📋</div>
+                            <div>点击"预览报告"查看报告内容</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 数据统计概览 -->
+            <div class="card scroll-reveal mb-8">
+                <h2 class="text-2xl font-bold text-coffee-dark mb-6 font-serif">数据统计概览</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-orders-stat">0</div>
+                        <div class="stat-label">总订单数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-revenue-stat">¥0</div>
+                        <div class="stat-label">总营收</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-shops-stat">0</div>
+                        <div class="stat-label">店铺数量</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-products-stat">0</div>
+                        <div class="stat-label">产品种类</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 导出历史 -->
+            <div class="card scroll-reveal">
+                <h2 class="text-2xl font-bold text-coffee-dark mb-6 font-serif">导出历史</h2>
+                
+                <div class="overflow-x-auto">
+                    <table class="report-table w-full">
+                        <thead>
+                            <tr>
+                                <th>报告名称</th>
+                                <th>模板类型</th>
+                                <th>导出格式</th>
+                                <th>生成时间</th>
+                                <th>文件大小</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="export-history">
+                            <tr>
+                                <td colspan="6" class="text-center py-8 text-text-secondary">
+                                    暂无导出记录
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- 加载核心JavaScript -->
+    <script src="main.js"></script>
+    
+    <script>
+        // 报告导出页面脚本
+        class ReportsPage {
+            constructor() {
+                this.selectedTemplate = 'orders';
+                this.exportHistory = [];
+                this.init();
+            }
+            
+            init() {
+                this.initTemplateSelection();
+                this.initFormHandlers();
+                this.updateStatistics();
+                this.initScrollReveal();
+            }
+            
+            initTemplateSelection() {
+                const templateCards = document.querySelectorAll('.template-card');
+                
+                templateCards.forEach(card => {
+                    card.addEventListener('click', () => {
+                        templateCards.forEach(c => c.classList.remove('selected'));
+                        card.classList.add('selected');
+                        this.selectedTemplate = card.dataset.template;
+                        
+                        // 更新表单选项
+                        this.updateFormOptions();
+                    });
+                });
+            }
+            
+            initFormHandlers() {
+                const form = document.getElementById('report-config-form');
+                const previewBtn = document.getElementById('preview-btn');
+                const exportBtn = document.getElementById('export-btn');
+                const dataFilter = document.getElementById('data-filter');
+                const filterOptions = document.getElementById('filter-options');
+                const filterValue = document.getElementById('filter-value');
+                
+                // 数据筛选变化
+                dataFilter.addEventListener('change', (e) => {
+                    const filterType = e.target.value;
+                    
+                    if (filterType === 'all') {
+                        filterOptions.classList.add('hidden');
+                    } else {
+                        filterOptions.classList.remove('hidden');
+                        this.updateFilterOptions(filterType, filterValue);
+                    }
+                });
+                
+                // 预览按钮
+                previewBtn.addEventListener('click', () => {
+                    this.generatePreview();
+                });
+                
+                // 导出按钮
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.exportReport();
+                });
+            }
+            
+            updateFormOptions() {
+                // 根据选择的模板更新表单选项
+                const includeKPI = document.getElementById('include-kpi');
+                const includeCharts = document.getElementById('include-charts');
+                const includeAnalysis = document.getElementById('include-analysis');
+                const includeRawData = document.getElementById('include-raw-data');
+                
+                // 根据模板类型设置默认选项
+                switch (this.selectedTemplate) {
+                    case 'orders':
+                        includeKPI.checked = true;
+                        includeCharts.checked = false;
+                        includeAnalysis.checked = false;
+                        includeRawData.checked = true;
+                        break;
+                    case 'analytics':
+                        includeKPI.checked = true;
+                        includeCharts.checked = true;
+                        includeAnalysis.checked = true;
+                        includeRawData.checked = false;
+                        break;
+                    case 'performance':
+                        includeKPI.checked = true;
+                        includeCharts.checked = true;
+                        includeAnalysis.checked = true;
+                        includeRawData.checked = false;
+                        break;
+                    case 'comparison':
+                        includeKPI.checked = true;
+                        includeCharts.checked = true;
+                        includeAnalysis.checked = true;
+                        includeRawData.checked = true;
+                        break;
+                }
+            }
+            
+            updateFilterOptions(filterType, filterValueSelect) {
+                filterValueSelect.innerHTML = '<option value="">请选择筛选条件</option>';
+                
+                switch (filterType) {
+                    case 'shop':
+                        DataStore.shops.forEach(shop => {
+                            const option = document.createElement('option');
+                            option.value = shop.id;
+                            option.textContent = shop.name;
+                            filterValueSelect.appendChild(option);
+                        });
+                        break;
+                    case 'product':
+                        PRODUCTS.forEach(product => {
+                            const option = document.createElement('option');
+                            option.value = product.id;
+                            option.textContent = product.name;
+                            filterValueSelect.appendChild(option);
+                        });
+                        break;
+                    case 'customer':
+                        Object.entries(CUSTOMER_PROFILES).forEach(([key, profile]) => {
+                            const option = document.createElement('option');
+                            option.value = key;
+                            option.textContent = profile.name;
+                            filterValueSelect.appendChild(option);
+                        });
+                        break;
+                }
+            }
+            
+            generatePreview() {
+                const previewContainer = document.getElementById('report-preview');
+                const config = this.getReportConfig();
+                
+                // 显示加载状态
+                previewContainer.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="animate-spin w-8 h-8 border-2 border-coffee-light border-t-transparent rounded-full mx-auto mb-4"></div>
+                        <div class="text-text-secondary">正在生成报告预览...</div>
+                    </div>
+                `;
+                
+                // 模拟生成预览
+                setTimeout(() => {
+                    const previewHTML = this.generatePreviewHTML(config);
+                    previewContainer.innerHTML = previewHTML;
+                }, 1000);
+            }
+            
+            generatePreviewHTML(config) {
+                const data = this.getReportData(config);
+                
+                let html = `
+                    <div class="mb-6">
+                        <h1 class="text-2xl font-bold text-coffee-dark mb-2">${config.name}</h1>
+                        <div class="text-sm text-text-secondary">
+                            生成时间: ${new Date().toLocaleString('zh-CN')} | 
+                            数据范围: ${this.getTimeRangeName(config.timeRange)} | 
+                            模板: ${this.getTemplateName(config.template)}
+                        </div>
+                    </div>
+                `;
+                
+                // 添加KPI概览
+                if (config.includeKPI) {
+                    html += `
+                        <div class="mb-6">
+                            <h2 class="text-lg font-semibold text-coffee-dark mb-4">关键指标概览</h2>
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <div class="stat-value">¥${data.totalRevenue.toLocaleString()}</div>
+                                    <div class="stat-label">总营收</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">${data.totalOrders}</div>
+                                    <div class="stat-label">订单总数</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">¥${data.avgOrderValue.toFixed(2)}</div>
+                                    <div class="stat-label">平均客单价</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">¥${data.totalProfit.toLocaleString()}</div>
+                                    <div class="stat-label">总利润</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // 添加数据表格预览
+                if (data.orders && data.orders.length > 0) {
+                    html += `
+                        <div class="mb-6">
+                            <h2 class="text-lg font-semibold text-coffee-dark mb-4">数据预览 (前10条记录)</h2>
+                            <table class="report-table">
+                                <thead>
+                                    <tr>
+                                        <th>订单ID</th>
+                                        <th>店铺</th>
+                                        <th>客户类型</th>
+                                        <th>金额</th>
+                                        <th>时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    data.orders.slice(0, 10).forEach(order => {
+                        html += `
+                            <tr>
+                                <td>${order.id.substring(0, 13)}...</td>
+                                <td>${order.shopName}</td>
+                                <td>${order.customerTypeName}</td>
+                                <td>¥${order.totalAmount}</td>
+                                <td>${order.timestamp.toLocaleString('zh-CN')}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += `
+                                </tbody>
+                            </table>
+                            <div class="text-sm text-text-secondary mt-2">
+                                共 ${data.orders.length} 条记录，显示前10条
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // 添加分析建议
+                if (config.includeAnalysis) {
+                    html += `
+                        <div class="mb-6">
+                            <h2 class="text-lg font-semibold text-coffee-dark mb-4">分析建议</h2>
+                            <div class="bg-cream-bg p-4 rounded-lg">
+                                <div class="text-sm text-text-secondary leading-relaxed">
+                                    ${this.generateAnalysisText(data)}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                return html;
+            }
+            
+            getReportData(config) {
+                let orders = DataStore.orders || [];
+                const now = new Date();
+                
+                // 按时间范围过滤
+                switch (config.timeRange) {
+                    case 'today':
+                        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        orders = orders.filter(order => order.timestamp >= today);
+                        break;
+                    case 'week':
+                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        orders = orders.filter(order => order.timestamp >= weekAgo);
+                        break;
+                    case 'month':
+                        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        orders = orders.filter(order => order.timestamp >= monthAgo);
+                        break;
+                }
+                
+                // 按筛选条件过滤
+                if (config.filterType !== 'all' && config.filterValue) {
+                    switch (config.filterType) {
+                        case 'shop':
+                            orders = orders.filter(order => order.shopId === config.filterValue);
+                            break;
+                        case 'product':
+                            orders = orders.filter(order => 
+                                order.items.some(item => item.productId === config.filterValue)
+                            );
+                            break;
+                        case 'customer':
+                            orders = orders.filter(order => order.customerType === config.filterValue);
+                            break;
+                    }
+                }
+                
+                // 处理订单数据
+                const processedOrders = orders.map(order => {
+                    const shop = DataStore.shops.find(s => s.id === order.shopId);
+                    const customerTypeName = CUSTOMER_PROFILES[order.customerType]?.name || order.customerType;
+                    
+                    return {
+                        ...order,
+                        shopName: shop ? shop.name : '未知店铺',
+                        customerTypeName
+                    };
+                });
+                
+                return {
+                    orders: processedOrders,
+                    totalRevenue: processedOrders.reduce((sum, order) => sum + order.totalAmount, 0),
+                    totalOrders: processedOrders.length,
+                    totalProfit: processedOrders.reduce((sum, order) => sum + order.profit, 0),
+                    avgOrderValue: processedOrders.length > 0 ? 
+                        processedOrders.reduce((sum, order) => sum + order.totalAmount, 0) / processedOrders.length : 0
+                };
+            }
+            
+            generateAnalysisText(data) {
+                const suggestions = [
+                    `当前数据集包含 ${data.orders.length} 个订单，总营收 ¥${data.totalRevenue.toLocaleString()}。`,
+                    `平均客单价为 ¥${data.avgOrderValue.toFixed(2)}，建议关注客单价提升策略。`,
+                    `总利润 ¥${data.totalProfit.toLocaleString()}，利润率 ${(data.totalProfit / data.totalRevenue * 100).toFixed(1)}%。`,
+                    `建议分析高峰时段客流，优化人员配置和库存管理。`,
+                    `可根据客户类型偏好，调整产品组合和营销策略。`
+                ];
+                
+                return suggestions.join(' ');
+            }
+            
+            exportReport() {
+                const config = this.getReportConfig();
+                const exportBtn = document.getElementById('export-btn');
+                const progressBar = this.createProgressBar();
+                
+                // 禁用导出按钮并显示进度
+                exportBtn.disabled = true;
+                exportBtn.textContent = '导出中...';
+                
+                // 模拟导出过程
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 20;
+                    if (progress > 100) progress = 100;
+                    
+                    progressBar.style.width = `${progress}%`;
+                    
+                    if (progress >= 100) {
+                        clearInterval(progressInterval);
+                        this.completeExport(config);
+                        exportBtn.disabled = false;
+                        exportBtn.textContent = '导出报告';
+                        
+                        // 移除进度条
+                        setTimeout(() => {
+                            const progressContainer = document.querySelector('.export-progress');
+                            if (progressContainer) {
+                                progressContainer.remove();
+                            }
+                        }, 2000);
+                    }
+                }, 200);
+            }
+            
+            createProgressBar() {
+                const form = document.getElementById('report-config-form');
+                const progressContainer = document.createElement('div');
+                progressContainer.className = 'export-progress';
+                progressContainer.innerHTML = '<div class="export-progress-bar"></div>';
+                
+                form.appendChild(progressContainer);
+                
+                return progressContainer.querySelector('.export-progress-bar');
+            }
+            
+            completeExport(config) {
+                const data = this.getReportData(config);
+                const exportData = this.formatExportData(data, config);
+                
+                // 添加到导出历史
+                const historyItem = {
+                    id: Date.now(),
+                    name: config.name,
+                    template: config.template,
+                    format: config.format,
+                    timestamp: new Date(),
+                    size: this.calculateFileSize(exportData),
+                    data: exportData
+                };
+                
+                this.exportHistory.unshift(historyItem);
+                this.updateExportHistory();
+                
+                // 触发文件下载
+                this.downloadFile(exportData, config);
+                
+                // 显示成功消息
+                this.showExportStatus('success', '报告导出成功！');
+            }
+            
+            formatExportData(data, config) {
+                switch (config.format) {
+                    case 'json':
+                        return JSON.stringify(data, null, 2);
+                    case 'csv':
+                        return this.convertToCSV(data.orders);
+                    case 'excel':
+                    case 'pdf':
+                    default:
+                        return data;
+                }
+            }
+            
+            convertToCSV(orders) {
+                if (!orders || orders.length === 0) return '';
+                
+                const headers = ['订单ID', '店铺', '客户类型', '金额', '利润', '时间'];
+                const csvContent = [
+                    headers.join(','),
+                    ...orders.map(order => [
+                        order.id,
+                        `"${order.shopName}"`,
+                        `"${order.customerTypeName}"`,
+                        order.totalAmount,
+                        order.profit,
+                        `"${order.timestamp.toLocaleString('zh-CN')}"`
+                    ].join(','))
+                ].join('\n');
+                
+                return csvContent;
+            }
+            
+            downloadFile(data, config) {
+                let content, filename, mimeType;
+                
+                switch (config.format) {
+                    case 'json':
+                        content = data;
+                        filename = `${config.name}.json`;
+                        mimeType = 'application/json';
+                        break;
+                    case 'csv':
+                        content = data;
+                        filename = `${config.name}.csv`;
+                        mimeType = 'text/csv;charset=utf-8;';
+                        break;
+                    case 'excel':
+                        // 这里应该使用Excel库生成真实的Excel文件
+                        content = JSON.stringify(data, null, 2);
+                        filename = `${config.name}.xlsx`;
+                        mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+                        break;
+                    case 'pdf':
+                        // 这里应该使用PDF库生成真实的PDF文件
+                        content = JSON.stringify(data, null, 2);
+                        filename = `${config.name}.pdf`;
+                        mimeType = 'application/pdf';
+                        break;
+                    default:
+                        content = JSON.stringify(data, null, 2);
+                        filename = `${config.name}.txt`;
+                        mimeType = 'text/plain';
+                }
+                
+                const blob = new Blob([content], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+            
+            calculateFileSize(data) {
+                const size = JSON.stringify(data).length;
+                if (size < 1024) return `${size} B`;
+                if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+                return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+            }
+            
+            updateExportHistory() {
+                const container = document.getElementById('export-history');
+                
+                if (this.exportHistory.length === 0) {
+                    container.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center py-8 text-text-secondary">
+                                暂无导出记录
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = '';
+                
+                this.exportHistory.slice(0, 10).forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="font-medium text-coffee-dark">${item.name}</td>
+                        <td>${this.getTemplateName(item.template)}</td>
+                        <td>${item.format.toUpperCase()}</td>
+                        <td>${item.timestamp.toLocaleString('zh-CN')}</td>
+                        <td>${item.size}</td>
+                        <td>
+                            <button onclick="reportsPage.reDownload('${item.id}')" 
+                                    class="text-coffee-medium hover:text-coffee-dark font-medium">
+                                重新下载
+                            </button>
+                        </td>
+                    `;
+                    container.appendChild(row);
+                });
+            }
+            
+            reDownload(itemId) {
+                const item = this.exportHistory.find(h => h.id == itemId);
+                if (item) {
+                    this.downloadFile(item.data, {
+                        name: item.name,
+                        format: item.format
+                    });
+                }
+            }
+            
+            getReportConfig() {
+                return {
+                    name: document.getElementById('report-name').value,
+                    template: this.selectedTemplate,
+                    format: document.getElementById('export-format').value,
+                    timeRange: document.getElementById('time-range').value,
+                    filterType: document.getElementById('data-filter').value,
+                    filterValue: document.getElementById('filter-value').value,
+                    includeKPI: document.getElementById('include-kpi').checked,
+                    includeCharts: document.getElementById('include-charts').checked,
+                    includeAnalysis: document.getElementById('include-analysis').checked,
+                    includeRawData: document.getElementById('include-raw-data').checked
+                };
+            }
+            
+            getTemplateName(template) {
+                const names = {
+                    orders: '订单明细报告',
+                    analytics: '运营分析报告',
+                    performance: '绩效评估报告',
+                    comparison: '策略对比报告'
+                };
+                return names[template] || template;
+            }
+            
+            getTimeRangeName(range) {
+                const names = {
+                    today: '今日',
+                    week: '本周',
+                    month: '本月',
+                    all: '全部数据'
+                };
+                return names[range] || range;
+            }
+            
+            updateStatistics() {
+                if (typeof DataStore === 'undefined') return;
+                
+                const orders = DataStore.orders || [];
+                const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+                const totalShops = DataStore.shops ? DataStore.shops.length : 0;
+                const totalProducts = PRODUCTS ? PRODUCTS.length : 0;
+                
+                this.animateNumber('total-orders-stat', orders.length);
+                this.animateNumber('total-revenue-stat', totalRevenue, '¥');
+                this.animateNumber('total-shops-stat', totalShops);
+                this.animateNumber('total-products-stat', totalProducts);
+            }
+            
+            animateNumber(elementId, targetValue, prefix = '') {
+                const element = document.getElementById(elementId);
+                if (!element) return;
+                
+                const currentValue = parseFloat(element.textContent.replace(/[^\d.]/g, '')) || 0;
+                const duration = 1000;
+                const startTime = performance.now();
+                
+                function updateNumber(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const currentValue = currentValue + (targetValue - currentValue) * progress;
+                    
+                    element.textContent = prefix + Math.floor(currentValue).toLocaleString();
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(updateNumber);
+                    }
+                }
+                
+                requestAnimationFrame(updateNumber);
+            }
+            
+            showExportStatus(type, message) {
+                const form = document.getElementById('report-config-form');
+                const existingStatus = form.querySelector('.export-status');
+                
+                if (existingStatus) {
+                    existingStatus.remove();
+                }
+                
+                const statusDiv = document.createElement('div');
+                statusDiv.className = `export-status ${type}`;
+                statusDiv.textContent = message;
+                
+                form.appendChild(statusDiv);
+                
+                // 3秒后自动移除
+                setTimeout(() => {
+                    if (statusDiv.parentNode) {
+                        statusDiv.remove();
+                    }
+                }, 3000);
+            }
+            
+            initScrollReveal() {
+                const observerOptions = {
+                    threshold: 0.1,
+                    rootMargin: '0px 0px -50px 0px'
+                };
+                
+                const observer = new IntersectionObserver(function(entries) {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('revealed');
+                        }
+                    });
+                }, observerOptions);
+                
+                document.querySelectorAll('.scroll-reveal').forEach(el => {
+                    observer.observe(el);
+                });
+            }
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 等待全局对象加载
+            if (typeof DataStore === 'undefined') {
+                const checkInterval = setInterval(() => {
+                    if (typeof DataStore !== 'undefined') {
+                        clearInterval(checkInterval);
+                        window.reportsPage = new ReportsPage();
+                    }
+                }, 100);
+            } else {
+                window.reportsPage = new ReportsPage();
+            }
+        });
+    </script>
+</body>
+</html>

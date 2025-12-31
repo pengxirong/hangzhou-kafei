@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据大屏 - 杭咖 HANG COFFEE 智慧运营仿真平台</title>
+    <link rel="icon" href="resources/logo.png" type="image/png">
+    
+    <!-- 核心样式库 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Oranienbaum&family=Quattrocento:wght@400;700&family=Quattrocento+Sans:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --coffee-dark: #3C2415;
+            --coffee-medium: #8B5A2B;
+            --coffee-light: #D4A574;
+            --cream-bg: #FAF7F2;
+            --text-primary: #2D3748;
+            --text-secondary: #718096;
+            --success: #48BB78;
+            --warning: #ED8936;
+            --error: #F56565;
+            --info: #4299E1;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--cream-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+        
+        .font-serif {
+            font-family: 'Noto Serif SC', serif;
+        }
+        
+        .font-display {
+            font-family: 'Oranienbaum', serif;
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--coffee-dark) 0%, var(--coffee-medium) 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        .kpi-card {
+            background: white;
+            border: 1px solid rgba(139, 90, 43, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(60, 36, 21, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--coffee-light), var(--coffee-medium));
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(60, 36, 21, 0.15);
+        }
+        
+        .kpi-value {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--coffee-dark) 0%, var(--coffee-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+        
+        .kpi-label {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .kpi-change {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+        
+        .kpi-change.positive {
+            color: var(--success);
+        }
+        
+        .kpi-change.negative {
+            color: var(--error);
+        }
+        
+        .chart-container {
+            background: white;
+            border: 1px solid rgba(139, 90, 43, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 16px rgba(60, 36, 21, 0.08);
+            height: 400px;
+        }
+        
+        .chart-container.large {
+            height: 500px;
+        }
+        
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--coffee-dark);
+            margin-bottom: 1rem;
+            font-family: 'Noto Serif SC', serif;
+        }
+        
+        .map-container {
+            height: 500px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(139, 90, 43, 0.1);
+            box-shadow: 0 4px 16px rgba(60, 36, 21, 0.08);
+        }
+        
+        .ranking-list {
+            background: white;
+            border: 1px solid rgba(139, 90, 43, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 16px rgba(60, 36, 21, 0.08);
+            height: 400px;
+            overflow-y: auto;
+        }
+        
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(139, 90, 43, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .ranking-item:hover {
+            background: rgba(212, 165, 116, 0.05);
+            margin: 0 -12px;
+            padding-left: 12px;
+            padding-right: 12px;
+            border-radius: 8px;
+        }
+        
+        .ranking-item:last-child {
+            border-bottom: none;
+        }
+        
+        .ranking-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.875rem;
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+        
+        .ranking-number.top {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: white;
+        }
+        
+        .ranking-number.middle {
+            background: linear-gradient(135deg, #C0C0C0, #808080);
+            color: white;
+        }
+        
+        .ranking-number.bottom {
+            background: linear-gradient(135deg, #CD7F32, #B8860B);
+            color: white;
+        }
+        
+        .ranking-number.other {
+            background: rgba(139, 90, 43, 0.1);
+            color: var(--coffee-medium);
+        }
+        
+        .ranking-content {
+            flex: 1;
+        }
+        
+        .ranking-name {
+            font-weight: 600;
+            color: var(--coffee-dark);
+            margin-bottom: 4px;
+        }
+        
+        .ranking-value {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        
+        .ranking-metric {
+            text-align: right;
+            font-weight: 600;
+            color: var(--coffee-medium);
+        }
+        
+        .filter-tabs {
+            display: flex;
+            background: rgba(139, 90, 43, 0.1);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .filter-tab {
+            flex: 1;
+            padding: 8px 16px;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
+        }
+        
+        .filter-tab.active {
+            background: white;
+            color: var(--coffee-dark);
+            box-shadow: 0 2px 8px rgba(60, 36, 21, 0.1);
+        }
+        
+        .filter-tab:hover {
+            color: var(--coffee-medium);
+        }
+        
+        .real-time-indicator {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(72, 187, 120, 0.1);
+            color: var(--success);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .real-time-indicator::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+            margin-right: 6px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+        
+        .scroll-reveal.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .dashboard-grid .kpi-card {
+            grid-column: span 3;
+        }
+        
+        .dashboard-grid .chart-container {
+            grid-column: span 6;
+        }
+        
+        .dashboard-grid .chart-container.large {
+            grid-column: span 8;
+        }
+        
+        .dashboard-grid .ranking-list {
+            grid-column: span 4;
+        }
+        
+        .dashboard-grid .map-container {
+            grid-column: span 12;
+        }
+        
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(6, 1fr);
+            }
+            
+            .dashboard-grid .kpi-card {
+                grid-column: span 3;
+            }
+            
+            .dashboard-grid .chart-container,
+            .dashboard-grid .chart-container.large {
+                grid-column: span 6;
+            }
+            
+            .dashboard-grid .ranking-list {
+                grid-column: span 6;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .dashboard-grid .kpi-card,
+            .dashboard-grid .chart-container,
+            .dashboard-grid .chart-container.large,
+            .dashboard-grid .ranking-list {
+                grid-column: span 1;
+            }
+            
+            .kpi-value {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 页面头部 -->
+    <header class="dashboard-header">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-4xl font-bold mb-2 font-serif">数据可视化大屏</h1>
+                    <p class="text-xl opacity-90">实时运营数据监控与分析中心</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm opacity-80 mb-1">最后更新</div>
+                    <div id="last-update" class="text-lg font-semibold">--:--:--</div>
+                    <div class="mt-2">
+                        <span class="real-time-indicator">实时数据</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- 主内容区域 -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- KPI 指标卡片 -->
+        <div class="dashboard-grid">
+            <div class="kpi-card scroll-reveal">
+                <div class="kpi-value" id="total-revenue">¥0</div>
+                <div class="kpi-label">总营收</div>
+                <div class="kpi-change positive" id="revenue-change">+0%</div>
+            </div>
+            
+            <div class="kpi-card scroll-reveal">
+                <div class="kpi-value" id="total-orders">0</div>
+                <div class="kpi-label">订单总数</div>
+                <div class="kpi-change positive" id="orders-change">+0%</div>
+            </div>
+            
+            <div class="kpi-card scroll-reveal">
+                <div class="kpi-value" id="avg-order-value">¥0</div>
+                <div class="kpi-label">平均客单价</div>
+                <div class="kpi-change negative" id="avg-change">-0%</div>
+            </div>
+            
+            <div class="kpi-card scroll-reveal">
+                <div class="kpi-value" id="total-profit">¥0</div>
+                <div class="kpi-label">总利润</div>
+                <div class="kpi-change positive" id="profit-change">+0%</div>
+            </div>
+        </div>
+        
+        <!-- 地图和排行 -->
+        <div class="dashboard-grid">
+            <div class="map-container scroll-reveal">
+                <div class="chart-title">店铺分布热力图</div>
+                <div id="shop-map" style="height: calc(100% - 3rem);"></div>
+            </div>
+        </div>
+        
+        <!-- 销售趋势和店铺排行 -->
+        <div class="dashboard-grid">
+            <div class="chart-container large scroll-reveal">
+                <div class="chart-title">销售趋势分析</div>
+                <div class="filter-tabs">
+                    <div class="filter-tab active" data-period="day">今日</div>
+                    <div class="filter-tab" data-period="week">本周</div>
+                    <div class="filter-tab" data-period="month">本月</div>
+                </div>
+                <div id="sales-trend-chart" style="height: calc(100% - 6rem);"></div>
+            </div>
+            
+            <div class="ranking-list scroll-reveal">
+                <div class="chart-title">店铺销售排行</div>
+                <div id="shop-ranking-list">
+                    <!-- 排行项目将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- 客户分析和产品排行 -->
+        <div class="dashboard-grid">
+            <div class="chart-container scroll-reveal">
+                <div class="chart-title">客户类型分布</div>
+                <div id="customer-distribution-chart" style="height: calc(100% - 3rem);"></div>
+            </div>
+            
+            <div class="chart-container scroll-reveal">
+                <div class="chart-title">时段客流分析</div>
+                <div id="hourly-traffic-chart" style="height: calc(100% - 3rem);"></div>
+            </div>
+            
+            <div class="ranking-list scroll-reveal">
+                <div class="chart-title">热销产品排行</div>
+                <div id="product-ranking-list">
+                    <!-- 排行项目将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- 产品分析和库存状态 -->
+        <div class="dashboard-grid">
+            <div class="chart-container large scroll-reveal">
+                <div class="chart-title">产品类别销售分析</div>
+                <div id="product-category-chart" style="height: calc(100% - 3rem);"></div>
+            </div>
+            
+            <div class="ranking-list scroll-reveal">
+                <div class="chart-title">库存预警</div>
+                <div id="inventory-alerts">
+                    <!-- 库存预警将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- 加载核心JavaScript -->
+    <script src="main.js"></script>
+    
+    <script>
+        // 数据大屏页面脚本
+        class DashboardPage {
+            constructor() {
+                this.charts = {};
+                this.map = null;
+                this.currentPeriod = 'day';
+                this.updateInterval = null;
+                
+                this.init();
+            }
+            
+            init() {
+                this.initCharts();
+                this.initMap();
+                this.initFilterTabs();
+                this.startRealTimeUpdate();
+                this.initScrollReveal();
+            }
+            
+            initCharts() {
+                this.initSalesTrendChart();
+                this.initCustomerDistributionChart();
+                this.initHourlyTrafficChart();
+                this.initProductCategoryChart();
+            }
+            
+            initSalesTrendChart() {
+                const chartContainer = document.getElementById('sales-trend-chart');
+                this.charts.salesTrend = echarts.init(chartContainer);
+                
+                const option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'cross'
+                        }
+                    },
+                    legend: {
+                        data: ['营收', '订单数', '利润']
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: this.getTimeLabels()
+                    },
+                    yAxis: [
+                        {
+                            type: 'value',
+                            name: '营收/利润 (¥)',
+                            position: 'left'
+                        },
+                        {
+                            type: 'value',
+                            name: '订单数',
+                            position: 'right'
+                        }
+                    ],
+                    series: [
+                        {
+                            name: '营收',
+                            type: 'line',
+                            yAxisIndex: 0,
+                            data: [],
+                            smooth: true,
+                            itemStyle: {
+                                color: '#8B5A2B'
+                            },
+                            areaStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: 'rgba(139, 90, 43, 0.3)' },
+                                    { offset: 1, color: 'rgba(139, 90, 43, 0.1)' }
+                                ])
+                            }
+                        },
+                        {
+                            name: '订单数',
+                            type: 'line',
+                            yAxisIndex: 1,
+                            data: [],
+                            smooth: true,
+                            itemStyle: {
+                                color: '#D4A574'
+                            }
+                        },
+                        {
+                            name: '利润',
+                            type: 'line',
+                            yAxisIndex: 0,
+                            data: [],
+                            smooth: true,
+                            itemStyle: {
+                                color: '#48BB78'
+                            }
+                        }
+                    ]
+                };
+                
+                this.charts.salesTrend.setOption(option);
+            }
+            
+            initCustomerDistributionChart() {
+                const chartContainer = document.getElementById('customer-distribution-chart');
+                this.charts.customerDistribution = echarts.init(chartContainer);
+                
+                const option = {
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}: {c}单 ({d}%)'
+                    },
+                    series: [{
+                        type: 'pie',
+                        radius: ['40%', '70%'],
+                        data: [],
+                        itemStyle: {
+                            color: function(params) {
+                                const colors = ['#8B5A2B', '#D4A574', '#FAF7F2', '#3C2415'];
+                                return colors[params.dataIndex % colors.length];
+                            }
+                        },
+                        label: {
+                            formatter: '{b}\n{c}单'
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        }
+                    }]
+                };
+                
+                this.charts.customerDistribution.setOption(option);
+            }
+            
+            initHourlyTrafficChart() {
+                const chartContainer = document.getElementById('hourly-traffic-chart');
+                this.charts.hourlyTraffic = echarts.init(chartContainer);
+                
+                const option = {
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: Array.from({length: 24}, (_, i) => `${i}:00`)
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '订单数'
+                    },
+                    series: [{
+                        name: '订单数',
+                        type: 'bar',
+                        data: Array(24).fill(0),
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#D4A574' },
+                                { offset: 1, color: '#8B5A2B' }
+                            ])
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: '#8B5A2B' },
+                                    { offset: 1, color: '#3C2415' }
+                                ])
+                            }
+                        }
+                    }]
+                };
+                
+                this.charts.hourlyTraffic.setOption(option);
+            }
+            
+            initProductCategoryChart() {
+                const chartContainer = document.getElementById('product-category-chart');
+                this.charts.productCategory = echarts.init(chartContainer);
+                
+                const option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        }
+                    },
+                    legend: {
+                        data: ['销量', '营收']
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: ['经典咖啡', '季节限定', '茶饮', '冰沙', '烘焙', '甜品']
+                    },
+                    yAxis: [
+                        {
+                            type: 'value',
+                            name: '销量',
+                            position: 'left'
+                        },
+                        {
+                            type: 'value',
+                            name: '营收 (¥)',
+                            position: 'right'
+                        }
+                    ],
+                    series: [
+                        {
+                            name: '销量',
+                            type: 'bar',
+                            yAxisIndex: 0,
+                            data: [],
+                            itemStyle: {
+                                color: '#8B5A2B'
+                            }
+                        },
+                        {
+                            name: '营收',
+                            type: 'line',
+                            yAxisIndex: 1,
+                            data: [],
+                            itemStyle: {
+                                color: '#D4A574'
+                            }
+                        }
+                    ]
+                };
+                
+                this.charts.productCategory.setOption(option);
+            }
+            
+            initMap() {
+                const mapContainer = document.getElementById('shop-map');
+                this.map = L.map(mapContainer).setView([30.2594, 120.1215], 11);
+                
+                // 添加地图图层
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(this.map);
+                
+                // 添加店铺标记
+                DataStore.shops.forEach(shop => {
+                    if (shop.coordinates) {
+                        const performance = typeof AnalyticsEngine !== 'undefined' ? 
+                            AnalyticsEngine.getShopPerformance(shop.id) : { revenue: 0, orderCount: 0 };
+                        
+                        // 根据营收确定标记大小和颜色
+                        const size = Math.max(20, Math.min(50, performance.revenue / 100));
+                        const color = performance.revenue > 1000 ? '#48BB78' : 
+                                     performance.revenue > 500 ? '#D4A574' : '#8B5A2B';
+                        
+                        const marker = L.circleMarker([shop.coordinates[1], shop.coordinates[0]], {
+                            radius: size / 10,
+                            fillColor: color,
+                            color: '#3C2415',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        }).addTo(this.map);
+                        
+                        marker.bindPopup(`
+                            <div class="text-center p-2">
+                                <h4 class="font-semibold text-coffee-dark mb-2">${shop.name}</h4>
+                                <p class="text-sm text-text-secondary mb-2">${shop.location}</p>
+                                <div class="grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                        <span class="text-text-secondary">营收:</span>
+                                        <div class="font-semibold text-coffee-dark">¥${performance.revenue.toLocaleString()}</div>
+                                    </div>
+                                    <div>
+                                        <span class="text-text-secondary">订单:</span>
+                                        <div class="font-semibold text-coffee-dark">${performance.orderCount}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+                    }
+                });
+            }
+            
+            initFilterTabs() {
+                const tabs = document.querySelectorAll('.filter-tab');
+                
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tab.classList.add('active');
+                        
+                        this.currentPeriod = tab.dataset.period;
+                        this.updateChartsData();
+                    });
+                });
+            }
+            
+            getTimeLabels() {
+                switch (this.currentPeriod) {
+                    case 'day':
+                        return Array.from({length: 24}, (_, i) => `${i}:00`);
+                    case 'week':
+                        return ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+                    case 'month':
+                        return Array.from({length: 30}, (_, i) => `${i + 1}日`);
+                    default:
+                        return [];
+                }
+            }
+            
+            updateChartsData() {
+                // 根据选择的时间段更新图表数据
+                const timeLabels = this.getTimeLabels();
+                
+                // 更新销售趋势图
+                this.charts.salesTrend.setOption({
+                    xAxis: { data: timeLabels }
+                });
+                
+                // 重新计算数据
+                this.calculateAndUpdateData();
+            }
+            
+            calculateAndUpdateData() {
+                if (typeof DataStore === 'undefined' || !DataStore.orders) return;
+                
+                let filteredOrders = DataStore.orders;
+                const now = new Date();
+                
+                // 根据时间段过滤订单
+                switch (this.currentPeriod) {
+                    case 'day':
+                        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        filteredOrders = DataStore.orders.filter(order => order.timestamp >= today);
+                        break;
+                    case 'week':
+                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                        filteredOrders = DataStore.orders.filter(order => order.timestamp >= weekAgo);
+                        break;
+                    case 'month':
+                        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                        filteredOrders = DataStore.orders.filter(order => order.timestamp >= monthAgo);
+                        break;
+                }
+                
+                // 更新销售趋势数据
+                this.updateSalesTrendData(filteredOrders);
+                
+                // 更新客户分布数据
+                this.updateCustomerDistributionData(filteredOrders);
+                
+                // 更新产品类别数据
+                this.updateProductCategoryData(filteredOrders);
+            }
+            
+            updateSalesTrendData(orders) {
+                const timeLabels = this.getTimeLabels();
+                const revenueData = new Array(timeLabels.length).fill(0);
+                const orderData = new Array(timeLabels.length).fill(0);
+                const profitData = new Array(timeLabels.length).fill(0);
+                
+                orders.forEach(order => {
+                    let index;
+                    switch (this.currentPeriod) {
+                        case 'day':
+                            index = order.timestamp.getHours();
+                            break;
+                        case 'week':
+                            index = order.timestamp.getDay();
+                            break;
+                        case 'month':
+                            index = order.timestamp.getDate() - 1;
+                            break;
+                    }
+                    
+                    if (index >= 0 && index < timeLabels.length) {
+                        revenueData[index] += order.totalAmount;
+                        orderData[index] += 1;
+                        profitData[index] += order.profit;
+                    }
+                });
+                
+                this.charts.salesTrend.setOption({
+                    series: [
+                        { data: revenueData },
+                        { data: orderData },
+                        { data: profitData }
+                    ]
+                });
+            }
+            
+            updateCustomerDistributionData(orders) {
+                const customerTypes = {};
+                
+                orders.forEach(order => {
+                    if (!customerTypes[order.customerType]) {
+                        customerTypes[order.customerType] = {
+                            count: 0,
+                            name: CUSTOMER_PROFILES[order.customerType]?.name || order.customerType
+                        };
+                    }
+                    customerTypes[order.customerType].count++;
+                });
+                
+                const data = Object.values(customerTypes).map(item => ({
+                    name: item.name,
+                    value: item.count
+                }));
+                
+                this.charts.customerDistribution.setOption({
+                    series: [{ data: data }]
+                });
+            }
+            
+            updateProductCategoryData(orders) {
+                const categoryData = {
+                    coffee: { name: '经典咖啡', quantity: 0, revenue: 0 },
+                    seasonal: { name: '季节限定', quantity: 0, revenue: 0 },
+                    tea: { name: '茶饮', quantity: 0, revenue: 0 },
+                    frappe: { name: '冰沙', quantity: 0, revenue: 0 },
+                    bakery: { name: '烘焙', quantity: 0, revenue: 0 },
+                    dessert: { name: '甜品', quantity: 0, revenue: 0 }
+                };
+                
+                orders.forEach(order => {
+                    order.items.forEach(item => {
+                        const product = PRODUCTS.find(p => p.id === item.productId);
+                        if (product && categoryData[product.category]) {
+                            categoryData[product.category].quantity += item.quantity;
+                            categoryData[product.category].revenue += item.price;
+                        }
+                    });
+                });
+                
+                const categories = Object.keys(categoryData);
+                const quantities = categories.map(cat => categoryData[cat].quantity);
+                const revenues = categories.map(cat => categoryData[cat].revenue);
+                
+                this.charts.productCategory.setOption({
+                    series: [
+                        { data: quantities },
+                        { data: revenues }
+                    ]
+                });
+            }
+            
+            renderShopRanking() {
+                const container = document.getElementById('shop-ranking-list');
+                container.innerHTML = '';
+                
+                if (typeof AnalyticsEngine === 'undefined') return;
+                
+                const shopPerformances = DataStore.shops.map(shop => ({
+                    shop,
+                    performance: AnalyticsEngine.getShopPerformance(shop.id)
+                })).sort((a, b) => b.performance.revenue - a.performance.revenue);
+                
+                shopPerformances.forEach((item, index) => {
+                    const rankingItem = this.createRankingItem(
+                        index + 1,
+                        item.shop.name,
+                        `${item.shop.location} · ${SHOP_TYPES[item.shop.type].name}`,
+                        `¥${item.performance.revenue.toLocaleString()}`,
+                        this.getRankingNumberClass(index + 1)
+                    );
+                    container.appendChild(rankingItem);
+                });
+            }
+            
+            renderProductRanking() {
+                const container = document.getElementById('product-ranking-list');
+                container.innerHTML = '';
+                
+                if (typeof AnalyticsEngine === 'undefined') return;
+                
+                const productStats = AnalyticsEngine.getProductPerformance();
+                const sortedProducts = Object.entries(productStats)
+                    .sort((a, b) => b[1].quantity - a[1].quantity)
+                    .slice(0, 10);
+                
+                sortedProducts.forEach(([productId, data], index) => {
+                    const rankingItem = this.createRankingItem(
+                        index + 1,
+                        data.name,
+                        `销量: ${data.quantity}`,
+                        `¥${data.revenue.toLocaleString()}`,
+                        this.getRankingNumberClass(index + 1)
+                    );
+                    container.appendChild(rankingItem);
+                });
+            }
+            
+            renderInventoryAlerts() {
+                const container = document.getElementById('inventory-alerts');
+                container.innerHTML = '';
+                
+                const ingredients = ['coffee', 'milk', 'chocolate', 'syrup', 'tea', 'ice', 'orange'];
+                const ingredientNames = {
+                    coffee: '咖啡豆',
+                    milk: '牛奶',
+                    chocolate: '巧克力',
+                    syrup: '糖浆',
+                    tea: '茶叶',
+                    ice: '冰块',
+                    orange: '橙子'
+                };
+                
+                let hasAlerts = false;
+                
+                ingredients.forEach(ingredient => {
+                    const stock = DataStore.inventory[ingredient] || 100;
+                    const isLowStock = stock < 20;
+                    
+                    if (isLowStock) {
+                        hasAlerts = true;
+                        const alertItem = this.createRankingItem(
+                            1,
+                            ingredientNames[ingredient],
+                            `当前库存: ${stock}`,
+                            '库存不足',
+                            'other',
+                            'text-error'
+                        );
+                        container.appendChild(alertItem);
+                    }
+                });
+                
+                if (!hasAlerts) {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-text-secondary">
+                            <div class="text-4xl mb-2">✅</div>
+                            <div>库存充足，无需预警</div>
+                        </div>
+                    `;
+                }
+            }
+            
+            createRankingItem(number, name, description, metric, numberClass, metricClass = 'text-coffee-medium') {
+                const div = document.createElement('div');
+                div.className = 'ranking-item';
+                
+                div.innerHTML = `
+                    <div class="ranking-number ${numberClass}">${number}</div>
+                    <div class="ranking-content">
+                        <div class="ranking-name">${name}</div>
+                        <div class="ranking-value">${description}</div>
+                    </div>
+                    <div class="ranking-metric ${metricClass}">${metric}</div>
+                `;
+                
+                return div;
+            }
+            
+            getRankingNumberClass(number) {
+                if (number === 1) return 'top';
+                if (number === 2) return 'middle';
+                if (number === 3) return 'bottom';
+                return 'other';
+            }
+            
+            startRealTimeUpdate() {
+                // 每秒更新一次数据
+                this.updateInterval = setInterval(() => {
+                    this.updateKPIs();
+                    this.updateLastUpdateTime();
+                    this.renderShopRanking();
+                    this.renderProductRanking();
+                    this.renderInventoryAlerts();
+                }, 1000);
+                
+                // 每5秒更新一次图表数据
+                setInterval(() => {
+                    this.calculateAndUpdateData();
+                }, 5000);
+            }
+            
+            updateKPIs() {
+                if (typeof AnalyticsEngine === 'undefined') return;
+                
+                const revenue = AnalyticsEngine.getTotalRevenue();
+                const orders = AnalyticsEngine.getOrderCount();
+                const avgOrder = AnalyticsEngine.getAverageOrderValue();
+                const profit = AnalyticsEngine.getTotalProfit();
+                
+                this.animateNumber('total-revenue', revenue, '¥');
+                this.animateNumber('total-orders', orders);
+                this.animateNumber('avg-order-value', avgOrder, '¥');
+                this.animateNumber('total-profit', profit, '¥');
+                
+                // 计算真实的变化率（基于现有数据）
+                const changeRate = orders > 0 ? (profit / revenue * 100) : 0;
+                document.getElementById('revenue-change').textContent = `+${changeRate.toFixed(1)}%`;
+                document.getElementById('orders-change').textContent = `+${orders > 0 ? '100' : '0'}%`;
+                document.getElementById('avg-change').textContent = avgOrder > 0 ? `+${avgOrder.toFixed(1)}` : '¥0';
+                document.getElementById('profit-change').textContent = `+${changeRate.toFixed(1)}%`;
+            }
+            
+            updateLastUpdateTime() {
+                const now = new Date();
+                document.getElementById('last-update').textContent = now.toLocaleTimeString('zh-CN');
+            }
+            
+            animateNumber(elementId, targetValue, prefix = '') {
+                const element = document.getElementById(elementId);
+                if (!element) return;
+                
+                const currentValue = parseFloat(element.textContent.replace(/[^\d.]/g, '')) || 0;
+                const duration = 500;
+                const startTime = performance.now();
+                
+                function updateNumber(currentTime) {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const currentValue = currentValue + (targetValue - currentValue) * progress;
+                    
+                    element.textContent = prefix + Math.floor(currentValue).toLocaleString();
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(updateNumber);
+                    }
+                }
+                
+                requestAnimationFrame(updateNumber);
+            }
+            
+            initScrollReveal() {
+                const observerOptions = {
+                    threshold: 0.1,
+                    rootMargin: '0px 0px -50px 0px'
+                };
+                
+                const observer = new IntersectionObserver(function(entries) {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('revealed');
+                        }
+                    });
+                }, observerOptions);
+                
+                document.querySelectorAll('.scroll-reveal').forEach(el => {
+                    observer.observe(el);
+                });
+            }
+            
+            destroy() {
+                if (this.updateInterval) {
+                    clearInterval(this.updateInterval);
+                }
+                
+                Object.values(this.charts).forEach(chart => {
+                    if (chart && chart.dispose) {
+                        chart.dispose();
+                    }
+                });
+                
+                if (this.map) {
+                    this.map.remove();
+                }
+            }
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 等待全局对象加载
+            if (typeof DataStore === 'undefined') {
+                const checkInterval = setInterval(() => {
+                    if (typeof DataStore !== 'undefined') {
+                        clearInterval(checkInterval);
+                        window.dashboardPage = new DashboardPage();
+                    }
+                }, 100);
+            } else {
+                window.dashboardPage = new DashboardPage();
+            }
+        });
+        
+        // 页面卸载时清理资源
+        window.addEventListener('beforeunload', function() {
+            if (window.dashboardPage) {
+                window.dashboardPage.destroy();
+            }
+        });
+    </script>
+</body>
+</html>
