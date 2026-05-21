@@ -516,6 +516,11 @@
                 this.initFormHandlers();
                 this.updateStatistics();
                 this.initScrollReveal();
+                
+                // 监听全局仿真更新，实时更新顶部统计卡片
+                window.addEventListener('simulationUpdate', () => {
+                    this.updateStatistics();
+                });
             }
             
             initTemplateSelection() {

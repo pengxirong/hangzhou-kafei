@@ -342,7 +342,12 @@
                         <div class="grid lg:grid-cols-2 gap-8">
                             <!-- 原料库存设置 -->
                             <div>
-                                <h3 class="text-lg font-semibold text-coffee-dark mb-4">原料库存设置</h3>
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-semibold text-coffee-dark">原料库存设置</h3>
+                                    <select id="inventory-shop-select" class="form-input py-1 px-2 text-sm bg-white border border-coffee-medium/20 rounded-md">
+                                        <!-- 店铺选项将动态生成 -->
+                                    </select>
+                                </div>
                                 <div id="inventory-settings" class="space-y-4">
                                     <!-- 库存设置将通过JavaScript动态生成 -->
                                 </div>
@@ -495,6 +500,13 @@
                 this.initProductManagement();
                 this.initInventoryManagement();
                 this.initScrollReveal();
+                
+                // 监听全局仿真更新，实时更新库存列表
+                window.addEventListener('simulationUpdate', () => {
+                    if (this.currentTab === 'inventory') {
+                        this.renderInventorySettings();
+                    }
+                });
             }
             
             initTabSwitching() {
@@ -736,6 +748,9 @@
                 this.renderShopsList();
                 this.closeShopModal();
                 
+                // 同步更新库存管理的店铺下拉框
+                this.populateInventoryShopSelect();
+                
                 // 重新初始化地图
                 if (this.map) {
                     this.map.remove();
@@ -755,6 +770,10 @@
                 if (confirm('确定要删除这个店铺吗？')) {
                     DataStore.shops = DataStore.shops.filter(s => s.id !== shopId);
                     this.renderShopsList();
+                    
+                    // 同步更新库存管理的店铺下拉框和库存显示
+                    this.populateInventoryShopSelect();
+                    this.renderInventorySettings();
                     
                     // 重新初始化地图
                     if (this.map) {
@@ -1029,12 +1048,57 @@
             }
             
             initInventoryManagement() {
+                this.populateInventoryShopSelect();
                 this.renderInventorySettings();
                 this.initInventorySliders();
+                
+                // 监听店铺选择改变
+                const shopSelect = document.getElementById('inventory-shop-select');
+                if (shopSelect) {
+                    shopSelect.addEventListener('change', () => {
+                        this.renderInventorySettings();
+                    });
+                }
+
+                // 监听全局仿真时钟 Tick，让库存流转实时化呈现 (WOW 亮点动效)
+                window.addEventListener('simulationUpdate', () => {
+                    if (this.currentTab === 'inventory') {
+                        this.renderInventorySettings();
+                    }
+                });
+            }
+            
+            populateInventoryShopSelect() {
+                const shopSelect = document.getElementById('inventory-shop-select');
+                if (!shopSelect) return;
+                
+                // 保留选择的值，避免刷新重置
+                const prevValue = shopSelect.value;
+                shopSelect.innerHTML = '';
+                
+                DataStore.shops.forEach(shop => {
+                    const option = document.createElement('option');
+                    option.value = shop.id;
+                    option.textContent = shop.name;
+                    shopSelect.appendChild(option);
+                });
+                
+                if (prevValue && DataStore.shops.some(s => s.id === prevValue)) {
+                    shopSelect.value = prevValue;
+                }
             }
             
             renderInventorySettings() {
                 const container = document.getElementById('inventory-settings');
+                const shopSelect = document.getElementById('inventory-shop-select');
+                if (!container) return;
+                
+                const shopId = shopSelect ? shopSelect.value : (DataStore.shops[0]?.id || '');
+                if (!shopId) {
+                    container.innerHTML = '<div class="text-center text-text-secondary py-8">暂无店铺数据</div>';
+                    return;
+                }
+                
                 const ingredients = ['coffee', 'milk', 'chocolate', 'syrup', 'tea', 'ice', 'orange'];
                 const ingredientNames = {
                     coffee: '咖啡豆',
@@ -1046,10 +1110,28 @@
                     orange: '橙子'
                 };
                 
+                // 确保 shopId 存在于 DataStore.inventory 中
+                if (!DataStore.inventory[shopId]) {
+                    DataStore.inventory[shopId] = {};
+                }
+                
                 container.innerHTML = '';
                 ingredients.forEach(ingredient => {
+                    // 读取 DataStore 中真实的实时库存
+                    const currentStock = DataStore.inventory[shopId][ingredient] !== undefined
+                        ? DataStore.inventory[shopId][ingredient]
+                        : 100;
+                    
                     const div = document.createElement('div');
-                    div.className = 'flex items-center justify-between p-3 bg-cream-bg rounded-lg';
+                    div.className = 'flex items-center justify-between p-3 bg-cream-bg rounded-lg transition-all duration-300';
+                    
+                    // 若库存偏低 (比如低于25)，赋予橙黄色警示色；低于10则赋红色警示
+                    let warningClass = 'text-coffee-dark';
+                    if (currentStock < 25 && currentStock >= 10) {
+                        warningClass = 'text-warning font-bold';
+                    } else if (currentStock < 10) {
+                        warningClass = 'text-error font-bold';
+                    }
                     
                     div.innerHTML = `
                         <div>
@@ -1057,7 +1139,7 @@
                             <div class="text-sm text-text-secondary">当前库存</div>
                         </div>
                         <div class="text-right">
-                            <div class="font-semibold text-coffee-dark">100</div>
+                            <div class="font-semibold ${warningClass}">${currentStock}</div>
                             <div class="text-sm text-text-secondary">单位</div>
                         </div>
                     `;

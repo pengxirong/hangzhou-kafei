@@ -47,7 +47,7 @@ function loadDataStore() {
     }
 }
 
-// 补算离页期间应产生的订单（最多补算10分钟仿真时间，防止暴增）
+// 补算离页期间应产生的订单（最多补算600分钟/10小时仿真时间，防止暴增）
 function catchUpSimulation(dataStore) {
     const wasRunning = localStorage.getItem(RUNNING_KEY) === 'true';
     if (!wasRunning) return;
@@ -496,7 +496,7 @@ class SimulationEngine {
             // 为每种原料设置基础库存
             const ingredients = ['coffee', 'milk', 'chocolate', 'syrup', 'tea', 'ice', 'orange'];
             ingredients.forEach(ingredient => {
-                if (!DataStore.inventory[shop.id][ingredient]) {
+                if (DataStore.inventory[shop.id][ingredient] === undefined) {
                     DataStore.inventory[shop.id][ingredient] = 100;
                 }
                 

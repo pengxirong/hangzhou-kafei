@@ -1007,22 +1007,25 @@
                 
                 let hasAlerts = false;
                 
-                ingredients.forEach(ingredient => {
-                    const stock = DataStore.inventory[ingredient] || 100;
-                    const isLowStock = stock < 20;
-                    
-                    if (isLowStock) {
-                        hasAlerts = true;
-                        const alertItem = this.createRankingItem(
-                            1,
-                            ingredientNames[ingredient],
-                            `当前库存: ${stock}`,
-                            '库存不足',
-                            'other',
-                            'text-error'
-                        );
-                        container.appendChild(alertItem);
-                    }
+                DataStore.shops.forEach(shop => {
+                    const shopInventory = DataStore.inventory[shop.id] || {};
+                    ingredients.forEach(ingredient => {
+                        const stock = shopInventory[ingredient] !== undefined ? shopInventory[ingredient] : 100;
+                        const isLowStock = stock < 20;
+                        
+                        if (isLowStock) {
+                            hasAlerts = true;
+                            const alertItem = this.createRankingItem(
+                                1,
+                                `${shop.name} - ${ingredientNames[ingredient]}`,
+                                `当前库存: ${stock}`,
+                                '库存不足',
+                                'other',
+                                'text-error'
+                            );
+                            container.appendChild(alertItem);
+                        }
+                    });
                 });
                 
                 if (!hasAlerts) {
