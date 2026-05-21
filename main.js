@@ -9,8 +9,18 @@ const CONFIG = {
     timeZone: 'Asia/Shanghai'
 };
 
-// 数据存储（带localStorage持久化）
+// 数据存储（带localStorage持久化 + 离页补算）
 const STORAGE_KEY = 'hangcoffee_datastore';
+const LEAVE_TIME_KEY = 'hangcoffee_leave_time';
+const RUNNING_KEY = 'hangcoffee_is_running';
+
+function saveDataStore() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(DataStore));
+    } catch (e) {
+        // 存储满时忽略
+    }
+}
 
 function loadDataStore() {
     try {
@@ -27,7 +37,7 @@ function loadDataStore() {
                 timestamp: new Date(o.timestamp)
             }));
         }
-        // 跨页后仿真状态置为停止（interval已销毁）
+        // 跨页后interval已销毁，isRunning强制置false
         if (parsed.simulation) {
             parsed.simulation.isRunning = false;
         }
@@ -37,11 +47,39 @@ function loadDataStore() {
     }
 }
 
-function saveDataStore() {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DataStore));
-    } catch (e) {
-        // 存储满时忽略
+// 补算离页期间应产生的订单（最多补算10分钟仿真时间，防止暴增）
+function catchUpSimulation(dataStore) {
+    const wasRunning = localStorage.getItem(RUNNING_KEY) === 'true';
+    if (!wasRunning) return;
+
+    const leaveTimeStr = localStorage.getItem(LEAVE_TIME_KEY);
+    if (!leaveTimeStr) return;
+
+    const leaveTime = parseInt(leaveTimeStr, 10);
+    const now = Date.now();
+    const realElapsedMs = now - leaveTime; // 真实经过的毫秒数
+    if (realElapsedMs <= 0) return;
+
+    const speed = dataStore.simulation.speed || 1;
+    // 仿真时间推进：每1000ms真实时间 = speed分钟仿真时间
+    const simMinutesToAdd = Math.floor((realElapsedMs / 1000) * speed);
+    // 上限：最多补算600仿真分钟（10小时仿真），避免数据爆炸
+    const cappedMinutes = Math.min(simMinutesToAdd, 600);
+    if (cappedMinutes <= 0) return;
+
+    // 临时借用引擎逻辑补算订单
+    const tempEngine = new SimulationEngine();
+    for (let i = 0; i < cappedMinutes; i++) {
+        const t = new Date(dataStore.simulation.currentTime);
+        t.setMinutes(t.getMinutes() + 1);
+        dataStore.simulation.currentTime = t;
+        // 直接调用生成逻辑（不触发UI/存储）
+        tempEngine._generateOrdersForTime(t);
+    }
+
+    // 截断订单数
+    if (dataStore.orders.length > 2000) {
+        dataStore.orders = dataStore.orders.slice(-2000);
     }
 }
 
@@ -59,6 +97,8 @@ let DataStore = loadDataStore() || {
         marketing: []
     }
 };
+
+// 页面加载时立即补算离页期间的数据（需在SimulationEngine定义后执行，见底部）
 
 // 店铺类型配置
 const SHOP_TYPES = {
@@ -181,6 +221,10 @@ class SimulationEngine {
         if (DataStore.simulation.isRunning) return;
         
         DataStore.simulation.isRunning = true;
+        // 记录"用户意图运行中"
+        localStorage.setItem(RUNNING_KEY, 'true');
+        localStorage.removeItem(LEAVE_TIME_KEY);
+        
         this.interval = setInterval(() => {
             this.tick();
         }, 1000 / DataStore.simulation.speed);
@@ -192,12 +236,28 @@ class SimulationEngine {
         if (!DataStore.simulation.isRunning) return;
         
         DataStore.simulation.isRunning = false;
+        localStorage.setItem(RUNNING_KEY, 'false');
+        localStorage.removeItem(LEAVE_TIME_KEY);
+        
         if (this.interval) {
             clearInterval(this.interval);
             this.interval = null;
         }
         
         this.logEvent('仿真暂停');
+    }
+
+    // 从localStorage恢复并自动继续运行（切回页面时调用）
+    resume() {
+        const wasRunning = localStorage.getItem(RUNNING_KEY) === 'true';
+        if (!wasRunning) return false;
+        // 补算离页订单
+        catchUpSimulation(DataStore);
+        saveDataStore();
+        // 重新启动interval
+        DataStore.simulation.isRunning = false; // 让start()能执行
+        this.start();
+        return true;
     }
 
     reset() {
@@ -243,8 +303,13 @@ class SimulationEngine {
     }
 
     generateOrders() {
-        const currentHour = DataStore.simulation.currentTime.getHours();
-        const currentDay = DataStore.simulation.currentTime.getDay();
+        this._generateOrdersForTime(DataStore.simulation.currentTime);
+    }
+
+    // 补算专用：传入指定时间生成订单
+    _generateOrdersForTime(simTime) {
+        const currentHour = simTime.getHours();
+        const currentDay = simTime.getDay();
         
         DataStore.shops.forEach(shop => {
             // 计算当前时段的基础客流量
@@ -824,8 +889,25 @@ if (typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', function() {
         initializeDefaultData();
         
+        // 补算离页期间的订单，然后自动恢复运行
+        simulationEngine.resume();
+        
         // 触发初始化完成事件
         window.dispatchEvent(new CustomEvent('appInitialized'));
+    });
+    
+    // 离开页面时记录时间戳（供下个页面补算）
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') {
+            if (localStorage.getItem(RUNNING_KEY) === 'true') {
+                localStorage.setItem(LEAVE_TIME_KEY, Date.now().toString());
+            }
+        } else {
+            // 回到页面时，如果仿真应该运行但interval已死，重新恢复
+            if (localStorage.getItem(RUNNING_KEY) === 'true' && !DataStore.simulation.isRunning) {
+                simulationEngine.resume();
+            }
+        }
     });
 }
 

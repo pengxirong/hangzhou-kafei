@@ -834,6 +834,9 @@
                 
                 // 更新产品类别数据
                 this.updateProductCategoryData(filteredOrders);
+                
+                // 更新时段客流数据
+                this.updateHourlyTrafficData(filteredOrders);
             }
             
             updateSalesTrendData(orders) {
@@ -893,6 +896,20 @@
                 this.charts.customerDistribution.setOption({
                     series: [{ data: data }]
                 });
+            }
+            
+            updateHourlyTrafficData(orders) {
+                const hourlyData = Array(24).fill(0);
+                orders.forEach(order => {
+                    const hour = order.timestamp.getHours();
+                    hourlyData[hour]++;
+                });
+                
+                if (this.charts.hourlyTraffic) {
+                    this.charts.hourlyTraffic.setOption({
+                        series: [{ data: hourlyData }]
+                    });
+                }
             }
             
             updateProductCategoryData(orders) {
@@ -1042,8 +1059,9 @@
             }
             
             startRealTimeUpdate() {
-                // 每秒更新一次数据
+                // 每秒从localStorage拉取最新数据（仿真在其他页面运行时也能更新）
                 this.updateInterval = setInterval(() => {
+                    this.refreshDataFromStorage();
                     this.updateKPIs();
                     this.updateLastUpdateTime();
                     this.renderShopRanking();
@@ -1055,6 +1073,29 @@
                 setInterval(() => {
                     this.calculateAndUpdateData();
                 }, 5000);
+            }
+            
+            refreshDataFromStorage() {
+                try {
+                    const saved = localStorage.getItem('hangcoffee_datastore');
+                    if (!saved) return;
+                    const parsed = JSON.parse(saved);
+                    if (parsed.orders) {
+                        parsed.orders = parsed.orders.map(o => ({
+                            ...o,
+                            timestamp: new Date(o.timestamp)
+                        }));
+                    }
+                    if (parsed.simulation && parsed.simulation.currentTime) {
+                        parsed.simulation.currentTime = new Date(parsed.simulation.currentTime);
+                    }
+                    // 更新全局DataStore（供AnalyticsEngine使用）
+                    DataStore.orders = parsed.orders || [];
+                    DataStore.shops = parsed.shops || DataStore.shops;
+                    DataStore.inventory = parsed.inventory || {};
+                    DataStore.simulation = parsed.simulation || DataStore.simulation;
+                    DataStore.simulation.isRunning = false; // 大屏页不控制运行状态
+                } catch(e) {}
             }
             
             updateKPIs() {

@@ -449,6 +449,23 @@
                 this.renderShopStatus();
                 this.initScrollReveal();
                 this.startRealTimeUpdate();
+                
+                // 检查是否需要自动恢复运行（main.js的resume()已处理补算和重启interval）
+                // 这里只负责同步UI状态
+                this.syncUIWithRunningState();
+            }
+            
+            syncUIWithRunningState() {
+                const wasRunning = localStorage.getItem('hangcoffee_is_running') === 'true';
+                if (wasRunning && DataStore.simulation.isRunning) {
+                    document.getElementById('start-btn').disabled = true;
+                    document.getElementById('pause-btn').disabled = false;
+                    document.getElementById('simulation-status').innerHTML = `
+                        <span class="status-indicator status-running"></span>
+                        运行中（已自动恢复）
+                    `;
+                    this.addEventLog('仿真引擎已自动恢复运行');
+                }
             }
             
             initControls() {
