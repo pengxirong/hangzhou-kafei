@@ -9,8 +9,43 @@ const CONFIG = {
     timeZone: 'Asia/Shanghai'
 };
 
-// 数据存储
-let DataStore = {
+// 数据存储（带localStorage持久化）
+const STORAGE_KEY = 'hangcoffee_datastore';
+
+function loadDataStore() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) return null;
+        const parsed = JSON.parse(saved);
+        // 恢复Date对象
+        if (parsed.simulation && parsed.simulation.currentTime) {
+            parsed.simulation.currentTime = new Date(parsed.simulation.currentTime);
+        }
+        if (parsed.orders) {
+            parsed.orders = parsed.orders.map(o => ({
+                ...o,
+                timestamp: new Date(o.timestamp)
+            }));
+        }
+        // 跨页后仿真状态置为停止（interval已销毁）
+        if (parsed.simulation) {
+            parsed.simulation.isRunning = false;
+        }
+        return parsed;
+    } catch (e) {
+        return null;
+    }
+}
+
+function saveDataStore() {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(DataStore));
+    } catch (e) {
+        // 存储满时忽略
+    }
+}
+
+let DataStore = loadDataStore() || {
     shops: [],
     customers: [],
     products: [],
@@ -169,6 +204,7 @@ class SimulationEngine {
         this.stop();
         DataStore.orders = [];
         DataStore.simulation.currentTime = new Date();
+        saveDataStore();
         this.logEvent('仿真重置');
     }
 
@@ -195,6 +231,12 @@ class SimulationEngine {
         
         // 触发事件
         this.triggerEvents();
+        
+        // 持久化数据（每tick保存，订单超2000条时截断防止localStorage溢出）
+        if (DataStore.orders.length > 2000) {
+            DataStore.orders = DataStore.orders.slice(-2000);
+        }
+        saveDataStore();
         
         // 更新UI
         this.updateUI();
@@ -674,6 +716,9 @@ if (typeof window !== 'undefined') {
 
 // 默认数据初始化
 function initializeDefaultData() {
+    // 已有持久化数据则不覆盖
+    const hasSavedData = localStorage.getItem(STORAGE_KEY) !== null;
+    
     // 初始化默认店铺
     if (DataStore.shops.length === 0) {
         const defaultShops = [
@@ -700,6 +745,9 @@ function initializeDefaultData() {
     if (DataStore.orders.length === 0) {
         generateDemoOrders();
     }
+    
+    // 保存初始数据
+    saveDataStore();
 }
 
 // 生成演示订单数据

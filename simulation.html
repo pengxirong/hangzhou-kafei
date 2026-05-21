@@ -869,11 +869,13 @@
             }
             
             updateHourlyTrafficChart() {
-                // 根据订单时间更新小时数据
+                // 每次重新统计，避免重复累加
+                const hourlyData = Array(24).fill(0);
                 DataStore.orders.forEach(order => {
                     const hour = order.timestamp.getHours();
-                    this.hourlyData[hour]++;
+                    hourlyData[hour]++;
                 });
+                this.hourlyData = hourlyData;
                 
                 this.charts.hourlyTraffic.setOption({
                     series: [{ data: this.hourlyData }]
@@ -930,16 +932,16 @@
                 const element = document.getElementById(elementId);
                 if (!element) return;
                 
-                const currentValue = parseFloat(element.textContent.replace(/[^\d.]/g, '')) || 0;
+                const startValue = parseFloat(element.textContent.replace(/[^\d.]/g, '')) || 0;
                 const duration = 500;
                 const startTime = performance.now();
                 
                 function updateNumber(currentTime) {
                     const elapsed = currentTime - startTime;
                     const progress = Math.min(elapsed / duration, 1);
-                    const currentValue = currentValue + (targetValue - currentValue) * progress;
+                    const val = startValue + (targetValue - startValue) * progress;
                     
-                    element.textContent = prefix + Math.floor(currentValue).toLocaleString();
+                    element.textContent = prefix + Math.floor(val).toLocaleString();
                     
                     if (progress < 1) {
                         requestAnimationFrame(updateNumber);

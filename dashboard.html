@@ -351,6 +351,25 @@
     </style>
 </head>
 <body>
+    <!-- 导航栏 -->
+    <nav style="background:white;border-bottom:1px solid rgba(139,90,43,0.1);position:sticky;top:0;z-index:50;box-shadow:0 2px 8px rgba(60,36,21,0.06);">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-14">
+                <div class="flex items-center space-x-3">
+                    <span style="font-size:1.5rem;">☕</span>
+                    <span style="font-family:'Noto Serif SC',serif;font-weight:700;color:#3C2415;font-size:1.1rem;">杭咖 HANG COFFEE</span>
+                </div>
+                <div class="flex items-center space-x-6" style="font-size:0.95rem;font-weight:500;">
+                    <a href="index.html" style="color:#718096;text-decoration:none;" onmouseover="this.style.color='#8B5A2B'" onmouseout="this.style.color='#718096'">首页</a>
+                    <a href="simulation.html" style="color:#718096;text-decoration:none;" onmouseover="this.style.color='#8B5A2B'" onmouseout="this.style.color='#718096'">仿真引擎</a>
+                    <a href="dashboard.html" style="color:#3C2415;text-decoration:none;border-bottom:2px solid #D4A574;padding-bottom:2px;">数据大屏</a>
+                    <a href="management.html" style="color:#718096;text-decoration:none;" onmouseover="this.style.color='#8B5A2B'" onmouseout="this.style.color='#718096'">数据管理</a>
+                    <a href="reports.html" style="color:#718096;text-decoration:none;" onmouseover="this.style.color='#8B5A2B'" onmouseout="this.style.color='#718096'">报告导出</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
     <!-- 页面头部 -->
     <header class="dashboard-header">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1068,16 +1087,16 @@
                 const element = document.getElementById(elementId);
                 if (!element) return;
                 
-                const currentValue = parseFloat(element.textContent.replace(/[^\d.]/g, '')) || 0;
+                const startValue = parseFloat(element.textContent.replace(/[^\d.]/g, '')) || 0;
                 const duration = 500;
                 const startTime = performance.now();
                 
                 function updateNumber(currentTime) {
                     const elapsed = currentTime - startTime;
                     const progress = Math.min(elapsed / duration, 1);
-                    const currentValue = currentValue + (targetValue - currentValue) * progress;
+                    const val = startValue + (targetValue - startValue) * progress;
                     
-                    element.textContent = prefix + Math.floor(currentValue).toLocaleString();
+                    element.textContent = prefix + Math.floor(val).toLocaleString();
                     
                     if (progress < 1) {
                         requestAnimationFrame(updateNumber);
